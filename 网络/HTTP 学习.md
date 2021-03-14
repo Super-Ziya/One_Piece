@@ -86,7 +86,7 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
 >
 > SPDY 位于 HTTP 之下，TCP 和 SSL 之上
 
-<img src="C:\Users\13085\Desktop\git_work\网络\计网图片\SPDY位置.png" alt="SPDY位置" style="zoom: 50%;" />
+<img src="\网络\计网图片\SPDY位置.png" alt="SPDY位置" style="zoom: 50%;" />
 
 - 降低延迟
 
@@ -192,7 +192,7 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
 - TLS（Transport Layer Security，安全传输层协议），TLS 与 SSL3.0 间存在着显著差别，主要是其支持的加密算法不同，所以 TLS 与 SSL3.0 不能互操作
 - HTTPS 为了兼顾安全与效率，同时使用了对称加密和非对称加密。数据是被对称加密传输的，对称加密过程需要客户端的一个密钥，为了确保能把该密钥安全传输到服务器端，采用非对称加密对该密钥进行加密传输，总的来说，对数据进行对称加密，对称加密所要使用的密钥通过非对称加密传输
 
-<img src="https://imgconvert.csdnimg.cn/aHR0cDovL2ltZy5ibG9nLmNzZG4ubmV0LzIwMTYwNjA4MjIwMzM3Njky?x-oss-process=image/format,png" alt="img" style="zoom: 67%;" />
+![https通信](C:\Users\13085\Desktop\One_Piece\网络\图片\https通信.png)
 
 - HTTPS 在传输的过程中会涉及到三个密钥：
 
@@ -200,15 +200,55 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
 >
 > 客户端生成的随机密钥，用来进行对称加密
 
-- 一个 HTTPS 请求实际上包含了两次 HTTP 传输：
-  - 客户端向服务器发起 HTTPS 请求，连接到服务器的 443 端口
-  - 服务器端有一个密钥对，即公钥和私钥，是用来进行非对称加密使用的，服务器端保存着私钥，不能将其泄露，公钥可以发送给任何人
-  - 服务器将自己的公钥发送给客户端
-  - 客户端收到服务器端的公钥后，对公钥进行检查，验证服务器发送的数字证书的合法性，如果发现公钥有问题，HTTPS 传输无法继续；如果公钥合格，客户端会生成一个随机值，用于进行对称加密的密钥（client key，客户端密钥），然后用服务器的公钥对客户端密钥进行非对称加密，客户端密钥变成密文，HTTPS 第一次 HTTP 请求结束
-  - 客户端发起 HTTPS 第二个 HTTP 请求，将加密后的客户端密钥发送给服务器
-  - 服务器接收到客户端发来的密文后，用自己的私钥对其进行非对称解密，解密之后的明文是客户端密钥，用客户端密钥对数据进行对称加密，数据变成密文
-  - 服务器将加密后的密文发送给客户端
-  - 客户端收到服务器发送来的密文，用客户端密钥对其进行对称解密，得到服务器发送的数据。HTTPS 第二个 HTTP 请求结束，整个 HTTPS 传输完成
+- HTTPS 请求：
+  - 客户端向服务器发起 HTTPS 请求，连接到服务器的 443 端口，发送 Client Hello 消息：
+
+    - 一个客户端生成的随机数 Random1
+    - 客户端支持的加密套件（Support Ciphers Suites）
+    - SSL Version
+    - 压缩算法（压缩 Http 头部）等
+
+  - 服务器端接收到 Client Hello 后发送 Server Hello 消息
+
+    - 从客户端传来的消息中确定一种加密套件（决定加密和生成摘要时使用的算法）
+    - 生成随机数 Random2（用来创建加密密钥）
+    - 如果支持则同意客户端首选的压缩算法
+    - 选择客户端支持的 SSL 最新版本
+
+    > 此时客户端知道：
+    >
+    > SSL 版本、密钥交换、信息验证、加密算法、压缩方法、两个随机数
+
+  - 服务器发送：
+
+    - Certificate 消息（可选）：数字证书和到根 CA 整个链，使客户端能用服务器证书中的**服务器公钥**认证服务器
+    - 服务器密钥交换（可选）：在 Client Hello 消息的 Cipher Suite 信息决定密钥交换方式（RSA 或 DH），在此处包含完成密钥交换所需的一系列参数
+    - 证书请求（可选）：要求客户自身进行验证，包含服务端支持的证书类型（RSA、DSA、ECDSA）和服务器端信任的所有 CA 列表，客户端用来筛选证书
+    - 服务器握手完成：第二阶段的结束，第三阶段开始的信号
+
+  - 客户端接收并解析，发送响应消息：
+
+    - Certificate 消息（可选）：若服务器端要求发送客户端证书则发送，若没有证书发送一个 no_certificate 警告
+
+    - 客户机密钥交换（Pre-master-secret）：根据随机数，按照密钥交换算法算出一个 pre-master（随机数）发送给服务器，服务器端收到后算出 main master（密钥），客户端也能算出 main master，如此双方算出对称密钥。发送过程使用服务器公钥加密，服务器用自己私钥解密（客户端证明自己持有客户端证书私钥）
+
+      > RSA 算法生成一个 48 字节的随机数
+      >
+      > DH 算法发送客户端 DH 参数
+
+    - 证书验证（可选）：在客户端发送自己证书到服务器端才需发送。包含一个签名，对从第一条消息以来的所有握手消息的 HMAC 值（用密钥）进行签名
+
+  - 客户端发送一个 ChangeCipherSpec 消息（编码改变通知，ChangeCipherSpec 是一个独立协议）
+
+    - 把协商的加密套件拷贝到当前连接状态中
+    - 用新算法、密钥参数发送一个 Finished 消息，同时是前面发送的所有内容的 hash 值，检查密钥交换和认证过程是否成功（使用 HMAC 算法计算收到和发送的所有握手消息的摘要，通过 RFC5246 定义的伪函数 PRF 计算出结果，加密后发送）
+
+  - 服务器同样发送 ChangeCipherSpec 消息和 Finished 消息
+
+    - 用私钥解密得 Pre-master 数据，基于两个明文随机数计算得协商密钥
+    - 计算之前所有接收信息的 hash 值，解密客户端发送的 hash 值，验证数据和密钥正确性
+    - 发送一个 ChangeCipherSpec（告知客户端已经切换到协商过的加密套件状态，准备使用加密套件和 Session Secret 加密数据）
+    - 用 Session Secret 加密一段 Finish 消息发送给客户端，验证之前通过握手建立起来的加解密通道是否成功
 
 ------
 
