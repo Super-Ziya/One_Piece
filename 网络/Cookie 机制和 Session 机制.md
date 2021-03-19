@@ -19,7 +19,13 @@
   - 浏览器访问 Google 只会携带 Google 的 Cookie，不会携带 Baidu 的，Google 只能操作 Google 的 Cookie，不能操作 Baidu 的
   - Cookie 在客户端由浏览器管理。浏览器保证 Google 只会操作 Google 的 Cookie 而不会操作 Baidu 的，从而保证用户隐私安全。浏览器判断一个网站是否能操作另一个网站 Cookie 的依据是域名
   - 虽然网站 images.google.com 与 www.google.com 同属 Google，但域名不一样，二者同样不能互相操作彼此的 Cookie，但登录网站 www.google.com 发现访问 images.google.com 时登录信息仍有效，普通 Cookie 做不到，而 Google 做了特殊处理
+- Fast Open
+
+![Fast_Open](图片.assets\Fast_Open.png)
+
 - Unicode 编码
 
 https://www.cnblogs.com/l199616j/p/11195667.html
+
+
 

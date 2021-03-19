@@ -27,7 +27,7 @@
     android:useLevel=["true" | "false"] /> //使用LevelListDrawable时就要设置为true。设为false时才有渐变效果   
 ```
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\shape渐变.png" alt="shape渐变" style="zoom: 67%;" />
+<img src="Image.assets\shape渐变.png" alt="shape渐变" style="zoom: 67%;" />
 
 - stroke：描边属性，可以定义描边的宽度，颜色，虚实线
 

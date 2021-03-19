@@ -49,7 +49,7 @@
 
 - 设计模式——桥接模式
 
-  ![WMS模式](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\WMS模式.png)
+  ![WMS模式](Image.assets\WMS模式.png)
 
 ### AMS
 
@@ -66,4 +66,4 @@
 
 - 设计模式——代理模式
 
-  ![AMS模式](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\AMS模式.png)
+  ![AMS模式](Image.assets\AMS模式.png)

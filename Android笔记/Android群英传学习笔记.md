@@ -1,4 +1,4 @@
-Android群英传学习笔记
+## Android群英传学习笔记
 
 ### 一、Android体系与系统架构
 
@@ -108,15 +108,15 @@ Android应用程序会在创建Application、Activity、Service时创建应用�
 
 在Android中，控件大致被分为两类，即ViewGroup控件与View控件。ViewGroup 控件作为父控件可以包含多个View控件，并管理其包含的View 控件。通过ViewGroup，整个界面上的控件形成了一个树形结构——控件树，上层控件负责下层子控件的测量与绘制，并传递交互事件。通常在Activity中使用的findViewByld() 方法，就是在控件树中以树的深度优先遍历来查找对应元素。在每棵控件树的顶部，都有一个ViewParent对象，这是整棵树的控制核心，所有的交互管理事件都由它来统一调度 和分配，从而可以对整个视图进行整体控制。
 
-![view](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\view.jpg)
+![view](Image.assets\view.jpg)
 
 通常情况下，在Activity中使用setContentView() 方法来设置-一个布局，在调用该方法后，布局内容才真正地显示出来。
 
-![UI界面架构](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\UI界面架构.jpg)
+![UI界面架构](Image.assets\UI界面架构.jpg)
 
 每个Activity都包含一个Window对象，在Android中Window对象通常由PhoneWindow来实现。PhoneWindow 将一个 DecorView 设置为整个应用窗口的根View。DecorView作为窗口界面的顶层视图，封装了一些窗口操作的通用方法。可以说，DecorView将要显示的具体内容呈现在了PhoneWindow上， 这里面的所有View 的监听事件，都通过WindowManagerService来进行接收，并通过Activity 对象来回调相应的onClickListener。在显示上，它将屏幕分成两部分，一个是TitleView，另一个是ContentView。ContentView是一个ID为content 的Framelayout ，activity_ main.xml 就是设置在这样-一个Framelayout 里。通过以上过程，我们可以建立起这样一个标准视图树。
 
-![标准视图树](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\标准视图树.jpg)
+![标准视图树](Image.assets\标准视图树.jpg)
 
 视图树的第二层装载了一个LinearLayout，作为ViewGroup，这一层的布局结构会根据对应的参数设置不同的布局，如最常用的布局上面显示TitleBar下面是Content这样的布局。而如果用户通过设置requestWindowFeature (Window.FEATURE_NO_ TTLE) 来设置全屏显示，视图树中的布局就只有Content 了，这就解释了为什么调用requestWindowFeature() 方法一定要在调用setContentView() 方法之前才能生效的原因。由于每个Android版本对UI的修改都比较多，图这里只是比较粗略地显示了视图树的结构。
 
@@ -623,7 +623,7 @@ xmlns:custom="http://schemas.android.com/apk/res-auto"
 
 i、弧线展示图
 
-![比例图](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\比例图.jpg)
+![比例图](Image.assets\比例图.jpg)
 
 该自定义View分为三个部分，分别是中间圆形、中间显示文字和外圈弧线。在 `onDraw()` 方法中一个个绘制即可。为了简单把View 绘制长度直接设置为屏幕的宽度。首先在初始化时设置好绘制三种图形的参数。
 
@@ -681,7 +681,7 @@ circle.setSweepValue(70);
 
 ii、音频条形图
 
-![音频图](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\音频图.jpg)
+![音频图](Image.assets\音频图.jpg)
 
 思路：绘制一个一个矩形，每个矩形之间偏移一点距离。
 
@@ -746,7 +746,7 @@ Android为触摸事件封装了一个类：MotionEvent，`onTouchEvent()` 方法
 - 获得点击事件类型，通过不同的Action（如 `MotionEvent.ACTION_DOWN` 、 `MotionEvent.ACTION_MOVE` ）来进行区分，并实现不同的逻辑。
 - ...
 
-> 例如有布局结构：最外层ViewGroup - A，中间层ViewGroup - B，底层View - M
+> 例如有布局结构：最外层 ViewGroup - A，中间层ViewGroup - B，底层View - M
 
 - ViewGroup 重写方法： `dispatchTouchEvent(MotionEvent ev)` 、 `onInterceptTouchEvent(MotionEvent ev)` 、 `onTouchEvent(MotionEvent ev)` 
 - View 重写方法： `onTouchEvent(MotionEvent ev)` 、 `dispatchTouchEvent(MotionEvent ev)` 
@@ -759,9 +759,9 @@ ViewGroup比View多一个方法 ——
 >
 > 事件处理返回值：True - 处理了，不用审核；False - 给上级处理
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\事件处理过程.png" alt="事件处理过程" style="zoom: 50%;" />
+<img src="Image.assets\事件处理过程.png" alt="事件处理过程" style="zoom: 50%;" />
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\事件拦截.png" alt="事件拦截" style="zoom: 50%;" />
+<img src="Image.assets\事件拦截.png" alt="事件拦截" style="zoom: 50%;" />
 
 ### 四、ListView使用技巧
 
@@ -1151,7 +1151,7 @@ Android 的窗口坐标体系和屏幕的触控事件 —— MotionEvent
 
 **（1）Android坐标系**
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\坐标系.png" alt="坐标系" style="zoom:50%;" />
+<img src="Image.assets\坐标系.png" alt="坐标系" style="zoom:50%;" />
 
 系统提供 `getLocationOnScreen(int location[])` 方法获取 Android 坐标系中点的位置，即该视图左上角在Android 坐标系中的坐标。在触控事件中使用 `getRawX()` ， `getRawY()` 方法所获得的坐标也是 Android 坐标系中的坐标。
 
@@ -1159,7 +1159,7 @@ Android 的窗口坐标体系和屏幕的触控事件 —— MotionEvent
 
 视图坐标系描述子视图在父视图中的位置关系。与 Android 坐标系类似，视图坐标系同样是以原点向右为X轴正方向，以原点向下为Y轴正方向
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\视图坐标系.png" alt="视图坐标系" style="zoom:50%;" />
+<img src="Image.assets\视图坐标系.png" alt="视图坐标系" style="zoom:50%;" />
 
 在触控事件中，通过 `getX()` 、 `getY()` 所获得的坐标就是视图坐标系中的坐标。
 
@@ -1211,7 +1211,7 @@ public boolean onTouchEvent(MotionEvent event){
 
 Android 系统提供非常多的方法来获取坐标值、相对距离等。
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\获取距离.png" alt="获取距离" style="zoom:50%;" />
+<img src="Image.assets\获取距离.png" alt="获取距离" style="zoom:50%;" />
 
 > View 提供的获取坐标方法
 
@@ -1311,11 +1311,11 @@ View 中的系统提供了 scrollTo、scrollBy 两种方式来改变一个View�
 
 手机屏幕如中空的盖板，盖板下面是一个巨大的画布，也就是显示的视图。调用 scrollBy 方法，可认为盖板在移动。
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\scrollBy.png" alt="scrollBy" style="zoom:75%;" />
+<img src="Image.assets\scrollBy.png" alt="scrollBy" style="zoom:75%;" />
 
  `scrollBy(20,10);` 
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\scrollBy2.png" alt="scrollBy2" style="zoom:75%;" />
+<img src="Image.assets\scrollBy2.png" alt="scrollBy2" style="zoom:75%;" />
 
 要实现跟随手指移动而滑动的效果，必须将偏移量改为负值。
 
@@ -1583,7 +1583,7 @@ protected void onSizeChanged(int w,int h,int oldw,int oldh){
 
 每个厂商的 Android 手机具有不同大小尺寸和像素密度的屏幕。系统定义了几个标准的 DPI 值，作为手机的固定DPI 。
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\DPI.png" alt="DPI" style="zoom:75%;" />
+<img src="Image.assets\DPI.png" alt="DPI"  />
 
 **（3）独立像素密度**
 
@@ -1848,7 +1848,7 @@ Layer是在Photoshop中非常常用的功能，在Android中同样可以通过La
 </layer-list>
 ```
 
-![图层](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\图层.png)
+![图层](Image.assets\图层.png)
 
 **（4）Selector**
 
@@ -1913,9 +1913,9 @@ Android 对图片的处理，最常使用的数据结构是位图（Bitmap），
 
 在Android中，系统使用一个颜色矩阵 —— ColorMatrix 来处理图像的色彩效果。Android 中的颜色矩阵是一个4×5 的数字矩阵，用来对图片的色彩进行处理。对于每个像素点，都有一个颜色分量矩阵用来保存颜色的RGBA值。图中矩阵A是一个 4×5 的颜色矩阵，在Android 中，它会以一维数组的形式来存储 [a,b,c,d,e,f,g,h,i,j,k,I,m,n,o,p,q,r,s,t] ，C 是颜色矩阵分量。在处理图像时，使用矩阵乘法运算 AC 来处理颜色分量矩阵。这个矩阵通常被用来作为初始的颜色矩阵来使用，它不会对原有颜色值进行任何变化。
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\颜色处理.jpg" alt="颜色处理" style="zoom:67%;" />
+<img src="Image.assets\颜色处理.jpg" alt="颜色处理" style="zoom:67%;" />
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\颜色矩阵.jpg" alt="颜色矩阵" style="zoom:67%;" />
+<img src="Image.assets\颜色矩阵.jpg" alt="颜色矩阵" style="zoom:67%;" />
 
 > 从这个公式可以发现，对于 4×5 颜色矩阵按以下方式划分：
 
@@ -1932,13 +1932,13 @@ Android 对图片的处理，最常使用的数据结构是位图（Bitmap），
 
 i、改变偏移量
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\颜色偏移量.jpg" alt="颜色偏移量" style="zoom:67%;" />
+<img src="Image.assets\颜色偏移量.jpg" alt="颜色偏移量" style="zoom:67%;" />
 
 在上面矩阵中，修改R、G对应的颜色偏移量，最后的处理结果是图像的红、绿色分量增加了100。而红绿混合会得到黄色，最终是让整个图像的色调偏黄色
 
 ii、改变颜色系数
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\颜色系数.jpg" alt="颜色系数" style="zoom:67%;" />
+<img src="Image.assets\颜色系数.jpg" alt="颜色系数" style="zoom:67%;" />
 
 在上面矩阵中，改变 G 分量对应系数 g，在矩阵运算后 G 分量变为以前的两倍，效果是图像的色调偏绿
 
@@ -2001,7 +2001,7 @@ canvas.drawBitmap(bm,0,0,paint);
 
 模拟一个颜色矩阵
 
-![颜色矩阵模拟](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\颜色矩阵模拟.png)
+![颜色矩阵模拟](Image.assets\颜色矩阵模拟.png)
 
 ```xml
 <GridLayout
@@ -2091,7 +2091,7 @@ ii、图像反转
  0, 0,  0, 1, 0，
 ```
 
-![颜色反转](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\颜色反转.png)
+![颜色反转](Image.assets\颜色反转.png)
 
 iii、怀旧效果
 
@@ -2247,7 +2247,7 @@ B.b = C.b - B.b + 127;
 
 对图像的图形变换，Android 系统通过矩阵处理，每个像素点表达其坐标的X、Y信息。Android 的图形变换矩阵是一个 3×3 的矩阵。
 
-![图形矩阵](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\图形矩阵.png)
+![图形矩阵](Image.assets\图形矩阵.png)
 
 ```
 X1 = a * X + b * Y + c
@@ -2259,7 +2259,7 @@ l = g * X + h * Y + i
 
 图形变换矩阵有一个初始矩阵，是对角线元素 a、e、i 为1，其他元素为0的矩阵。
 
-![图形初始矩阵](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\图形初始矩阵.png)
+![图形初始矩阵](Image.assets\图形初始矩阵.png)
 
 > 图像的变形处理通常包含以下四类基本变换
 
@@ -2277,7 +2277,7 @@ X = X0 + △X
 Y = Y0 + △y
 ```
 
-![平移变换](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\平移变换.png)
+![平移变换](Image.assets\平移变换.png)
 
 ii、旋转变换
 
@@ -2292,7 +2292,7 @@ x = r·cos(α+θ) = r·cosα·cosθ - r·sinα·sinθ = x0cosθ - y0sinθ
 y = r·sin(α+θ) = r·sinα·cosθ + r·cosα·sinθ = y0cosθ + x0sinθ
 ```
 
-![旋转变换](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\旋转变换.png)
+![旋转变换](Image.assets\旋转变换.png)
 
 > 以任意点 О 为旋转中心进行旋转变换通常需要以下三个步骤：
 
@@ -2309,20 +2309,20 @@ x = K1 * x0
 y = K2 * y0
 ```
 
-![缩放变换](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\缩放变换.png)
+![缩放变换](Image.assets\缩放变换.png)
 
 vi、错切变换
 
 错切变换（skew）在数学上又称为 Shear mapping （”剪切变换”）或者 Transvection（缩并）。错切变换的效果是让所有点的 X 坐标（或 y 坐标）保持不变，而对应的 y 坐标（或 x 坐标）按比例发生平移，平移大小和该点到x轴（或y轴）的垂直距离成正比。错切变换通常包含两种：水平错切与垂直错切。
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\水平垂直错切.png" alt="水平垂直错切" style="zoom:67%;" />
+<img src="Image.assets\水平垂直错切.png" alt="水平垂直错切" style="zoom:67%;" />
 
 ```
 x = x0 + K1 * y0
 y = K2 * x0 + y0
 ```
 
-![错切变换矩阵](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\错切变换矩阵.png)
+![错切变换矩阵](Image.assets\错切变换矩阵.png)
 
 - A、E 控制 Scale：缩放变换
 - B、D 控制 Skew：错切变换
@@ -2379,7 +2379,7 @@ PorterDuffXfermode设置的是两个图层交集区域的显示方式，dst是�
 
 用的最多的是使用一张图片作为另一张图片的遮罩层，通过控制遮罩层的图形，来控制下面被遮罩图形的显示效果。其中最常用的就是通过DST_IN、SRC_IN模式实现将一个矩形图片变成圆角图片或者圆形图片的效果。PorterDuffXfermode 进行图层混合时并不只进行图层的计算，同时也会计算透明通道的值。
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\PorterDuffXfermode.png" alt="PorterDuffXfermode" style="zoom:67%;" />
+<img src="Image.assets\PorterDuffXfermode.png" alt="PorterDuffXfermode" style="zoom:67%;" />
 
 在使用 PorterDuffXfermode 时最好将硬件加速关闭，因为有些模式不支持硬件加速。
 
@@ -2421,7 +2421,7 @@ PathEffect 指用各种笔触效果来绘制一个路径。Android 系统提供�
 - PathDashPathEffect：与上一个类似，但功能更强大，可设置显示点的图形
 - ComposePathEffect：该方法的功能是将任意两种路径特性组合形成新效果
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\PathEffect.png" alt="PathEffect" style="zoom:80%;" />
+<img src="Image.assets\PathEffect.png" alt="PathEffect" style="zoom:80%;" />
 
 #### 8、SurfaceView
 
@@ -3058,7 +3058,7 @@ mCenterWidth、mCenterHeight 是缩放中心点，设为图片中心。
 
 实例：结合矩阵，使用 Camera 类实现一个自定义 3D 动画效果。Camera 是 android.graphics.Camera 中的Camera 类，它封装了 openGL 的 3D 动画，可以方便地创建 3D 动画效果。类似于一个摄像机，当物体固定在某处时，只要移动摄像机就能拍摄到具有立体感的图像
 
-![camera](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\camera.png)
+![camera](Image.assets\camera.png)
 
 ```java
 @override
@@ -3166,7 +3166,7 @@ i、VectorDrawable
 
 在XML中创建一个静态的 SVG 图形，通常会形成如图树形结构。path 是 SVG 树形结构中的最小单位，通过Group 可将不同的 path 组合
 
-![SVG树形结构](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\SVG树形结构.png)
+![SVG树形结构](Image.assets\SVG树形结构.png)
 
 ```xml
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -3368,7 +3368,7 @@ Android 系统有另外一个非常重要的目录来存储系统信息 —— /
 
 > PackageManager
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\package.jpg" alt="package" style="zoom:80%;" />
+<img src="Image.assets\package.jpg" alt="package" style="zoom:80%;" />
 
 - 最里面的框代表整个 Activity 的信息，系统提供 ActivityInfo 类进行封装
 - 最外面的框代表整个 Mainifest 文件中节点的信息，系统提供 PackageInfo 进行封装

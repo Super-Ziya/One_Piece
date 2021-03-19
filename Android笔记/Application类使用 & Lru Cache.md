@@ -2,7 +2,7 @@
 
 ---
 
-<img src="C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\Application解析.png" alt="Application解析" style="zoom:80%;" />
+<img src="Image.assets\Application解析.png" alt="Application解析" style="zoom:80%;" />
 
 #### 1、定义
 
@@ -21,17 +21,17 @@
 - 单例模式：每个 Android App 运行时，先自动创建 Application 类并实例化 Application 对象，且只有一个，可以通过继承 Application 类自定义 Application 类和实例
 - 全局实例：Activity、Service 都可获得 Application 对象且是同一对象
 - 生命周期：等于 Android App 生命周期
+- 启动时系统会创建一个 PID
 
 #### 3、方法
 
-![Application方法](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\Application方法.png)
+![Application方法](Image.assets\Application方法.png)
 
+- `onCreate()` ：Application 实例创建时调用，Android 系统的入口，默认空实现
 
-
-- `onCreate()` ：Application 实例创建时调用，是 Android 系统的入口，默认空实现
   - 作用：
     - 初始化应用程序级别资源，如全局对象、环境变量、图片资源初始化、推送服务注册，不要进行耗时操作
-    - 数据共享、数据缓存：设置全局共享数据、变量、方法
+    - 数据共享、缓存：设置全局共享数据、变量、方法
 
 - `registerComponentCallbacks()` & `unregisterComponentCallbacks()` ：注册、注销 ComponentCallbacks2 回调接口
 
@@ -64,7 +64,7 @@
     >
     > 可回收的资源：缓存（如文件、图片）、动态生成 & 添加的 View
 
-    ![Application内存使用级别](C:\Users\13085\Desktop\git_work\Android\Android笔记\Image\Application内存使用级别.png)
+    ![Application内存使用级别](Image.assets\Application内存使用级别.png)
 
     - 可回调对象
 
@@ -76,7 +76,9 @@
       ContentProvider.OnTrimMemory()
       ```
 
-    - OnTrimMemory() 的 TRIM_MEMORY_UI_HIDDEN 回调时刻：应用程序中所有 UI 组件全部不可见，Activity 的 onStop() 回调时刻是当一个 Activity 完全不可见，TRIM_MEMORY_UI_HIDDEN 等级在 onStop() 前调用
+    - `OnTrimMemory()` 的 TRIM_MEMORY_UI_HIDDEN 回调时刻：应用程序中所有 UI 组件全部不可见
+
+    - Activity 的 `onStop()` 回调时刻是当一个 Activity 完全不可见，TRIM_MEMORY_UI_HIDDEN 等级在 onStop() 前调用
 
   - `onLowMemory()` ：监听 Android 系统整体内存较低时刻
 
