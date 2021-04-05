@@ -93,3 +93,138 @@
     > 区别：虚拟内存是硬盘的一部分，是内存和硬盘的数据交换区。内存映射是一个文件到一块内存的映射，程序通过内存指针就可访问文件。虚拟内存的硬件基础是分页机制和局部性原理，将程序一部分装入内存，其余部分留在外存，访问信息不存在再将数据调入内存。而内存映射文件不是局部性，而是使虚拟地址空间某个区域映射磁盘的全部或部分内容，通过该区域对被映射磁盘文件进行访问，不必 I/O 和缓冲
 
 - 套接字：明确地区分客户端与服务器，可实现多个客户端连到同一服务器
+
+#### 5、IO多路复用
+
+> 单线程或单进程同时监测若干个文件描述符是否可以执行 IO 操作的能力
+
+- DMA（Direct Memory Access，直接存储器访问）：处理 IO
+
+- Pagecache：Linux 内核所使用的主要磁盘高速缓存。内核读写磁盘时都用到 PageCache
+
+  - 如果程序想读部分不在高速缓存，先申请一个 4KB 大小的新页框加到 PageCache，再用磁盘读到的数据填充
+
+  - 写操作时，先把要写的数据写到 pageCache，标记当前页面为脏，然后程序自己调用系统调用刷盘，或等内核到自己的默认设置刷盘，没及时写时断电白写
+
+- 文件描述符 fd：Linux 将一切抽象为文件，文件描述符用于对应打开/新建的文件，本质是个非负整数。实际上是个索引值，指向内核为每个进程所维护的该进程打开文件的记录表。程序打开现有或创建新文件时，内核向进程返回一个文件描述符
+
+  - 每个进程一旦创建都有三个默认的文件描述符，u 代表读写都可
+    - 0u（标准输入）
+    - 1u（标准输出）
+    - 2u（报错信息输出）
+
+  - 每个文件描述符代表的数据结构中都有自己的偏移量，表示它可从当前文件哪个位置进行操作（读写）
+  - 每个进程都有自己的文件描述符，因为进程隔离，不同进程维护的文件描述符可重复
+  - 假如不同进程的相同文件描述符指向同一文件，仍各自维护自己的偏移量指针，每个进程可各自访问自己区域
+
+- socket：socket 类型的文件描述符有自己的缓存数据区域，但不是要刷盘的，是要通过网卡发走的，中间经历各种网络协议包装成数据包发往目标 IP 地址
+
+##### （1）select
+
+- 把 readset 和 writeset 的文件描述符对应位置 1，交给 `select()` 系统调用判断哪个文件描述符打开（将读/写文件描述符集合从用户态拷贝到内核态中，在内核中判断事件来临，会阻塞），如果某个 fd 不可读/写，该位置 0，如果可读，数组中仍然为 1，系统调用后返回可读可写的数量和
+- 循环遍历所有文件描述符用 FD_ISSET() 判断是否进行读写操作
+- 有数据来临，FD 置位（不可重用），select 返回（不阻塞）
+
+```c
+int FD_ISSET(int fd,fd_set *fdset);  //返回值：若fd在文件描述符集中，返回非0值；否则，返回0
+void FD_CLR(int fd,fd_set *fdset);   //清除最后一位
+void FD_SET(int fd,fd_set *fdset);   //开启描述符中的一位
+void FD_ZERO(fd_set *fdset);         //所有描述符位置位0
+
+while(1){
+    FD_ZERO(&rset);
+    for(i=0;i<5;i+r){
+        //&rset是文件描述符集合
+        //如五个文件描述符存的12346，则&rset为0111101（有1024位）
+	    FD_SET(fds[i],&rset);
+    }
+	//文件描述符最大值+1，读文件描述符集合，写文件描述符集合，异常文件描述符集合，超时时间
+    //int select(int maxfpd1,fdset *read_fds,fdset *write_fds,fdset *exception_fds,struct timeval *restrict tvpr);
+    select(max+1,&rset,NULL,NULL,NULL);//会阻塞
+    for(i=0;i<5;i++){//再遍历
+	    if(FD_ISSET(fds[i],&rset)){
+		    memset(buffer,0,MAXBUF);
+		    read(fds[i],buffer,MAXBUF);
+            puts(buffer);
+    }
+}
+```
+
+- 优点：一次系统调用把所有 fds 传给内核，减少 BIO 多次调用的开销（假设 1000 个连接只有一个发来数据，BIO 需向内核发送 1000 次系统调用，999 次无意义，消耗时间和内存资源）
+- 缺点
+  - 最大文件描述符编号为 1024
+  - 直接在 readset、writeset 做修改，不可重用
+  - 用户态到内核态的切换开销
+  - 不能返回哪位有事件，需再遍历
+
+##### （2）poll
+
+- 将rset从用户态拷贝到内核态中，在内核中判断事件来临（会阻塞）
+- 有数据来临，pollfd.revents置位，poll返回（不阻塞）
+
+```c
+struct pollfd{
+	int fd;
+	short events;//在意的事件（POLLIN读、POLLOUT写）
+    short revents;//events的回馈，默认0
+}
+
+while(1){
+    puts("round again");
+	//pollfd数组，元素个数，超时时间
+    //int poll(struct pollfd fdarry[],nfds_t nfds,int timeout);
+    poll(pollfds,5,50000);//会阻塞
+    for(i=0;i<5;i++){//再遍历
+	    if(pollfds[i].revents & POLLIN){
+		    pollfds[i].revents = 0;//置0，可重用
+		    memset(buffer,0,MAXBUF);
+		    read(pollfds[i].fd,buffer,MAXBUF);
+            puts(buffer);
+        }
+    }
+}
+```
+
+- 优点
+  - 内核操作的是结构体的 revents 字段，没有破坏其他字段，可复用
+  - 没有 select 最大支持 1024 个文件描述符的限制
+- 缺点
+  - 每次 poll 都要重新遍历全量 fds
+  - 不能返回哪位有事件，需再遍历
+
+##### （3）epoll
+
+![Linux_epoll](图片.assets\Linux_epoll.png)
+
+- Linux 特有
+- 把文件描述符放到内核一个事件表中，epoll 需用一个额外文件描述符表示内核中的事件表
+
+```c
+struct epoll_event{
+    _uint32_t events; //epoll事件，读、写、异常三种
+    epoll_data_t data; //用户数据
+}
+struct epoll_data{
+    void* prt;
+    int fd;
+    _uint32_t u32;
+    _uint64_t u64;
+}epoll_data_t;
+
+int epoll_create(int size);//返回一个文件描述符，描述的是内核中一块内存区域，size现在不起作用
+//用来操作内核事件表，epfd表示epoll_create()返回的事件表，fd表示新创建的socket文件描述符
+//op:
+//EPOLL_CTL_ADD：事件表中添加一个文件描述符，内核应关注的socket事件在epoll_event结构体中，添加到事件表的文件描述符以红黑树形式存在，防止重复添加
+//EPOLL_CTL_MOD：修改fd上注册的事件
+//EPOLL_CTL_DEL：删除fd上注册的事件
+int epoll_ctl(int epfd,int op,int fd,struct epoll_event *event);
+int epoll_wait(int epfd,struct epoll_event * events,int maxevents,int timeout);//返回就绪文件描述符个数
+```
+
+- 工作模式
+  - LT
+    - fd 可读后，如果服务程序读走一部分就结束此次读取，LT 模式下该文件描述符仍然可读
+    - fd 可写后，如果服务程序写了一部分就结束此次写入，LT 模式下该文件描述符仍然可写
+  - ET
+    - fd 可读后，如果服务程序读走一部分就结束此次读取，ET 模式下该文件描述符不可读，需等到下次数据到达时才变为可读，要保证循环读取数据，确保把所有数据读出
+    - fd 可写后，如果服务程序写了一部分就结束此次写入，ET 模式下该文件描述符不可写，要写入数据，确保把数据写满

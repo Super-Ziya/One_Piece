@@ -192,7 +192,7 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
 
 - 多路复用
 
-  > 连接共享，一个 request 对应一个 id，一个连接上可以有多个 request，每个连接的 request 可以随机的混杂在一起，接收方可以根据request的 id将request再归属到各自不同的服务端请求里面。
+  > 连接共享，一个 request 对应一个 id，一个连接上可以有多个 request，每个连接的 request 可以随机的混杂在一起，接收方可以根据request的 id 将 request 再归属到各自不同的服务端请求里面。
 
 - header 压缩
 
@@ -328,6 +328,8 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
 
 ### 九、TCP
 
+> https://mp.weixin.qq.com/s/HjOUsKn8eLfDogbBX3hPnA
+
 - TCP 与 UDP 的区别
   - TCP 面向连接，发送数据前需要建立连接，UDP 是无连接的
 
@@ -401,6 +403,8 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
   
 - SACK
 
+  ![SACK](图片.assets\SACK.png)
+
   - 问题：快重传和超时重传后发送端不知道丢包后的数据有无传输成功
 
   - SACK 是 TCP 一个选项，允许 TCP 单独确认非连续片段，告知真正丢失的包，只重传丢失片段，使用时必须两个设备都支持 SACK
@@ -429,11 +433,41 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
 
 - D-SACK
 
+  ![DSACK](图片.assets\DSACK.png)
+
   - D-SACK 使用 SACK 告诉发送方哪些数据被重复接收，SACK option 第一个 block 代表被重复发送的序列片段
     - D-SACK 仅是接收端报告一个重复的连续片段
     - 每个重复连续片段只在一个 block 中
     - 重复片段的序列号
     - 第二个 block 指的是 data 没有被确认的
+
+- 半连接 & 全连接
+
+  ![半连接&全连接](图片.assets\半连接&全连接.png)
+
+  - syns queue（半连接队列）
+
+    - Linux 默认队列大小 1024
+    - 服务端发送 SYN_ACK 后会开启一个定时器，如果超时没收到客户端的 ACK，将重发 SYN_ACK 包。重传次数默认 5 次
+
+  - accept queue（全连接队列）
+
+    - 使用 listen 函数时，内核会根据传入的 backlog 参数与系统参数 somaxconn 比较取较小值。
+    - Nginx 和 Redis 默认的 backlog 值为 511，Linux 默认为 128，Java 默认为 50
+    - 默认情况下，全连接队列满以后，服务端会忽略客户端的 ACK，随后重传 SYN+ACK，也可修改这种行为
+    - tcp_abort_on_overflow 为 0 表示三次握手最后一步全连接队列满后，服务端会丢掉客户端发过来的ACK，随后重传 SYN+ACK，为 1 表示全连接队列满后，服务端发送 RST 给客户端，直接释放资源
+
+  - 三次握手
+
+    - server 收到 client 的 syn 后，把相关信息放到半连接队列中
+    - 回复 syn+ack 给 client
+    - server 收到 client 的 ack，如果这时全连接队列没满，从半连接队列拿出相关信息放入全连接队列中，否则按 tcp_abort_on_overflow 指示执行。如果全连接队列满且 tcp_abort_on_overflow 是 0，server 过一段时间再次发送 syn+ack 给 client（重走握手第二步），如果 client 超时等待比较短就容易异常
+
+  - sync flood 攻击：针对半连接队列，攻击方不停建连接，但只做第一步，第二步中攻击方收到 server 的 syn+ack 后故意扔掉导致 server 上该队列满，其它请求无法进来
+
+    - 预防：SYN Cookie 技术，服务器收到 SYN 包返回 SYN + ACK 包时，不分配一个专门的数据区，而是根据 SYN 包计算一个 cookie 值，作为返回 SYN ACK 包的初始序列号，当客户端返回一个 ACK 包时，根据包头信息计算 cookie，与返回的确认序列号（初始序列号 + 1）对比，相同则是一个正常连接，然后分配资源，建立连接
+
+      >  缺点：cookie 计算只涉及包头部分信息，建立连接在服务端不保存任何信息，失去超时重传等功能，计算 cookie 有延迟时间
 
 ### 十、HTTP3 QUIC
 

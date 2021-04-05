@@ -255,4 +255,86 @@
   }
   ```
 
-  
+#### 3、IdleHandler
+
+- 一个接口
+
+  ```java
+  //回调接口，用于发现线程何时阻塞去等待消息
+  public static interface IdleHandler {
+      //当消息队列已用完消息且现在在等待更多消息时调用
+      //返回 true 保留消息，等到下次空闲时再次执行
+      //返回 false 删除
+      //如果队列仍有挂起的消息，但这些消息都计划在当前时间后调度，则可调用此函数
+      boolean queueIdle();
+  }
+  ```
+
+> 消息队列空闲时执行其 `queueIdle()`，返回一个 Boolean 值，false 表示执行完后移除这条消息，true 则
+
+- MessageQueue.next
+
+  - 处理 IdleHandler 后会将 nextPollTimeoutMillis 设为 0（不阻塞消息队列）， 注意这里执行的代码不能太耗时（同步执行，太耗会影响后面的 message 执行）
+  - 本质是趁消息队列空闲时干点事情提高处理性能，
+
+  - 使用 IdleHandler 只需调用 `MessageQueue#addIdleHandler(IdleHandler handler)` 方法
+  - 流程
+    - 如果本次循环拿到的 Message 为空或者 Message 是个延时消息且还没到指定触发时间，认定当前队列为空闲时间
+    - 接着遍历 mPendingIdleHandlers 数组（数组里的元素每次都到 mIdleHandlers 中拿），调用每个 IdleHandler 实例的 queueIdle 方法
+    - 如果返回 false，实例从 mIdleHandlers 中移除
+
+  ```java
+  Message next() {
+      //......
+      for (;;) {
+          //......
+          synchronized (this) {
+              // 此处为正常消息队列的处理
+              //......
+              if (mQuitting) {
+                  dispose();
+                  return null;
+              }
+              //IdleHandler数组mPendingIdleHandlers，放的IdleHandler实例都是临时的，即每次使用完(调用queueIdle方法)后都会置空(mPendingIdleHandlers[i]=null)
+              if (pendingIdleHandlerCount < 0 && (mMessages == null || now < mMessages.when)) {
+                  //mIdleHandlers，存放IdleHandler的ArrayList
+                  pendingIdleHandlerCount = mIdleHandlers.size();
+              }
+              if (pendingIdleHandlerCount <= 0) {
+                  //没有空闲的处理程序可运行,循环再等等
+                  mBlocked = true;
+                  continue;
+              }
+              if (mPendingIdleHandlers == null) {
+                  mPendingIdleHandlers = new IdleHandler[Math.max(pendingIdleHandlerCount, 4)];
+              }
+              mPendingIdleHandlers = mIdleHandlers.toArray(mPendingIdleHandlers);
+          }
+          for (int i = 0; i < pendingIdleHandlerCount; i++) {
+              final IdleHandler idler = mPendingIdleHandlers[i];
+              mPendingIdleHandlers[i] = null; //释放对处理程序的引用
+              boolean keep = false;
+              try {
+                  keep = idler.queueIdle();
+              } catch (Throwable t) {
+                  Log.wtf(TAG, "IdleHandler threw exception", t);
+              }
+              if (!keep) {
+                  synchronized (this) {
+                      mIdleHandlers.remove(idler);
+                  }
+              }
+          }
+          pendingIdleHandlerCount = 0;
+          nextPollTimeoutMillis = 0;
+      }
+  }
+  ```
+
+- 应用
+  - Activity 启动优化：onCreate，onStart，onResume 耗时较短但非必要的代码可放到 IdleHandler 中执行，减少启动时间
+  - ActivityThread 中有一个 GcIdler 内部类，实现 IdleHandler 接口，在 queueIdle 方法被回调时会强行 GC（调用 BinderInternal 的 faceGc 方法），前提是与上一次强行 GC 至少相隔 5 秒以上，当 ActivityThread 的 mH（Handler）收到 GC_WHEN_IDLE 消息后调用，收到 GC_WHEN_IDLE 消息：
+    - doLowMemReportIfNeededLocked：内存不够时调用
+    - activityIdle：当 ActivityThread 的 handleResumeActivity 方法被调用时（Activity 的 onResume 方法在这里回调）调用
+  - 想要一个 View 绘制完成后添加其他依赖于这个 View 的 View，可以 `View#post()` 实现，但用IdleHandler 会在消息队列空闲时执行
+  - 一些第三方库中使用，如 LeakCanary，Glide

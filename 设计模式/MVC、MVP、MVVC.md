@@ -3,7 +3,7 @@
 #### 1、MVC
 
 - MVC 组成及与 Android 对应
-  - 视图（View）：用户界面。主要是 xml 布局文件，自定义 View 或 ViewGroup，负责将用户请求通知 Controller，并根据model 更新界面
+  - 视图（View）：用户界面。主要是 xml 布局文件，自定义 View 或 ViewGroup，负责将用户请求通知 Controller，并根据 model 更新界面
   - 控制器（Controller）：业务逻辑。是数据模型，类似 javabean，封装对数据库、网络等的操作，负责数据处理相关的逻辑，对应 Android 中的 datebase、SharePreference 等
   - 模型（Model）：数据保存。Activity 或 Fragment，接收用户请求并更新 model
 

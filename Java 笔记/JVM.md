@@ -9,15 +9,11 @@
 - java 虚拟机 JVM 只关心“字节码”文件，具有语言无关性
 - JVM 整体结构（HotSpot 虚拟机）
 
-<img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第02章_JVM架构-简图.jpg" alt="第02章_JVM架构-简图" style="zoom: 50%;" />
+<img src="JVM上篇配图\第02章_JVM架构-简图.jpg" alt="第02章_JVM架构-简图" style="zoom: 50%;" />
 
 - 详细结构
 
-<img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第02章_JVM架构-英.jpg" alt="第02章_JVM架构-英" style="zoom: 50%;" />
-
----
-
-<img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第02章_JVM架构-中.jpg" alt="第02章_JVM架构-中" style="zoom: 50%;" />
+<img src="JVM上篇配图\第02章_JVM架构-中.jpg" alt="第02章_JVM架构-中" style="zoom: 50%;" />
 
 #### 2、JVM 结构模型
 
@@ -58,12 +54,12 @@
   - ClassLoader 只负责 class 文件的加载，能否运行由 Execution Engine（执行引擎）决定
   - 类信息存放于方法区的内存空间，方法区中还会存放运行时常量池信息，可能包含字符串字面量和数值常量（这部分常量信息是 class 文件中常量池部分的内存映射）
 
-<img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第02章_类加载器子系统.jpg" alt="第02章_类加载器子系统" style="zoom:33%;" />
+<img src="JVM上篇配图\第02章_类加载器子系统.jpg" alt="第02章_类加载器子系统" style="zoom:33%;" />
 
 - 类加载器 ClassLoader 角色
   - class file 存在于本地硬盘上，执行时根据该文件实例化几个模板实例加载到 JVM 中，称为 DNA 元数据模板，存放于方法区中（ClassLoader 在 .class -> JVM -> 元数据模板 中作为运输工具）
 
-<img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第02章_类加载器.jpg" alt="第02章_类加载器" style="zoom:80%;" />
+<img src="JVM上篇配图\第02章_类加载器.jpg" alt="第02章_类加载器" style="zoom:80%;" />
 
 ---
 
@@ -125,9 +121,8 @@
   System.out.println(number); //10
   ```
 
-  
 
-<img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第02章_类的加载过程.jpg" alt="第02章_类的加载过程" style="zoom:33%;" />
+<img src="JVM上篇配图\第02章_类的加载过程.jpg" alt="第02章_类的加载过程" style="zoom:33%;" />
 
 ---
 
@@ -224,7 +219,7 @@
   - 避免类的重复加载
   - 保护程序安全，防止核心 API 被篡改
 
-<img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第02章_双亲委派机制.png" alt="第02章_双亲委派机制" style="zoom:80%;" />
+<img src="JVM上篇配图\第02章_双亲委派机制.png" alt="第02章_双亲委派机制" style="zoom:80%;" />
 
 - 沙箱安全机制
 
@@ -325,7 +320,7 @@
   - 方法返回地址
   - 一些附加信息
 
-<img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第05章_栈桢内部结构.jpg" alt="第05章_栈桢内部结构" style="zoom:33%;" />
+<img src="JVM上篇配图\第05章_栈桢内部结构.jpg" alt="第05章_栈桢内部结构" style="zoom:33%;" />
 
 - 局部变量表
 
@@ -381,7 +376,7 @@
   >
   > java 源文件编译到字节码文件中时，所有变量和方法引用都作为符号引用保存在 class 文件的常量池中，一个方法调用其他方法就是通过常量池中指向方法的符号引用来表示的，动态链接的作用是将这些符号引用转换为调用方法的直接引用
 
-<img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第05章_栈桢内部结构.jpg" alt="第05章_栈桢内部结构" style="zoom:33%;" />
+<img src="JVM上篇配图\第05章_栈桢内部结构.jpg" alt="第05章_栈桢内部结构" style="zoom:33%;" />
 
 - 方法的调用
   - 静态链接：字节码文件装载进 JVM 内部时，若调用的方法在编译器可知，且运行期保持不变，将调用方法的符号引用转换为直接引用的过程
@@ -546,7 +541,7 @@
 
   - 年老代
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第08章_堆空间细节.jpg" alt="第08章_堆空间细节" style="zoom: 33%;" />
+  <img src="JVM上篇配图\第08章_堆空间细节.jpg" alt="第08章_堆空间细节" style="zoom: 33%;" />
 
 - 堆空间大小设置
 
@@ -588,11 +583,11 @@
     
   - 垃圾回收频繁在新生区收集，很少在养老区收集，几乎不再永久区/元空间收集
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第08章_新生代对象分配与回收过程.jpg" alt="第08章_新生代对象分配与回收过程" style="zoom:25%;" />
+  <img src="JVM上篇配图\第08章_新生代对象分配与回收过程.jpg" alt="第08章_新生代对象分配与回收过程" style="zoom:25%;" />
 
   - 对象分配
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第08章_对象存活机制.png" alt="第08章_对象存活机制"  />
+  <img src="JVM上篇配图\第08章_对象存活机制.png" alt="第08章_对象存活机制"  />
 
 - 三种 GC
 
@@ -641,13 +636,13 @@
   >
   > `-XX:TLABWasteTargetPercent` 设置 TLAB 空间占比
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第08章_TLAB.jpg" alt="第08章_TLAB" style="zoom: 33%;" />
+  <img src="JVM上篇配图\第08章_TLAB.jpg" alt="第08章_TLAB" style="zoom: 33%;" />
 
   - 为什么有 TLAB：
     - 对象实例的创建在 JVM 中很频繁，在并发环境下从堆中划分内存空间是线程不安全的，为避免多个线程操作同一地址，需要加锁等机制，影响分配速度
     - 使用 TLAB 可以避免一系列非线程安全问题，提升内存分配吞吐量（快速分配策略）
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第08章_TLAB分配.png" alt="第08章_TLAB分配" style="zoom:80%;" />
+  <img src="JVM上篇配图\第08章_TLAB分配.png" alt="第08章_TLAB分配" style="zoom:80%;" />
 
 - 堆外存储
 
@@ -702,7 +697,7 @@
 >
 > 方法区大小决定了系统可以保存多少个类，系统定义太多的类（加载太多的第三方 jar 包）会导致溢出 OOM，关闭 JVM 可以释放该区域的内存
 
-<img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第09章_栈、堆、方法区.jpg" alt="第09章_栈、堆、方法区" style="zoom:80%;" />
+<img src="JVM上篇配图\第09章_栈、堆、方法区.jpg" alt="第09章_栈、堆、方法区" style="zoom:80%;" />
 
 - 为什么元空间替换永久代
 
@@ -739,9 +734,9 @@
 
 - 存放内容
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第09章_方法区存储内容.jpg" alt="第09章_方法区存储内容" style="zoom: 50%;" />
+  <img src="JVM上篇配图\第09章_方法区存储内容.jpg" alt="第09章_方法区存储内容" style="zoom: 50%;" />
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第09章_方法区存储信息.jpg" alt="第09章_方法区存储信息" style="zoom:33%;" />
+  <img src="JVM上篇配图\第09章_方法区存储信息.jpg" alt="第09章_方法区存储信息" style="zoom:33%;" />
 
   - 类型信息（类 class、接口 interface、枚举 enum、注解 annotation）
     
@@ -831,7 +826,7 @@
   >
   > 来源于 NIO，通过堆中的 DirectByteBuffer（缓存区）操作 Native 内存
   >
-  > <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第09章_直接内存NIO.jpg" alt="第09章_直接内存NIO" style="zoom: 50%;" />
+  > <img src="JVM上篇配图\第09章_直接内存NIO.jpg" alt="第09章_直接内存NIO" style="zoom: 50%;" />
   >
   > 速度通常优于 Java 堆，即读写性能高（频繁使用的场合，NIO 库运行 Java 程序使用直接内存用于数据缓冲区）
   >
@@ -841,7 +836,7 @@
 
 #### 13、对象的创建
 
-![第10章_对象的实例化](C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第10章_对象的实例化.jpg)
+![第10章_对象的实例化](JVM上篇配图\第10章_对象的实例化.jpg)
 
 - 对象创建步骤
   - 判断类是否加载、链接、初始化：虚拟机遇到 new 指令，先检查该指令能否在元空间常量池中定位到类的符号引用，并检查该符号引用是否被加载、解析和初始（判断类元信息是否存在），若没有，在双亲委派模式下使用当前类的加载器以 ClassLoader+包名+类名为 Key 查找对应 .class 文件，若没有抛出 ClassNotFoundException 异常，找到就进行类加载并生产对应 Class 对象
@@ -854,15 +849,15 @@
   - 设置对象头：将对象所属类（类的元数据信息）、对象的 HashCode 和对象的 GC 信息、锁等数据存储在对象的对象头中
   - 执行 init 方法进行初始化：执行实例化代码块，调用类构造方法，吧堆内对象的首地址赋值给引用变量，因此 new 指令后接着是执行方法，进行对象初始化
 
-![第10章_内存布局](C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第10章_内存布局.jpg)
+![第10章_内存布局](JVM上篇配图\第10章_内存布局.jpg)
 
 - 内存布局总览
 
-![第10章_图示对象的内存布局](C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第10章_图示对象的内存布局.jpg)
+![第10章_图示对象的内存布局](JVM上篇配图\第10章_图示对象的内存布局.jpg)
 
 - 对象访问定位
 
-  ![第10章_对象访问定位](C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第10章_对象访问定位.jpg)
+  ![第10章_对象访问定位](JVM上篇配图\第10章_对象访问定位.jpg)
 
   - 句柄访问
 
@@ -870,11 +865,11 @@
     >
     > 优点：移动对象修改句柄即可
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第10章_方式1：句柄访问.jpg" alt="第10章_方式1：句柄访问" style="zoom:33%;" />
+  <img src="JVM上篇配图\第10章_方式1：句柄访问.jpg" alt="第10章_方式1：句柄访问" style="zoom:33%;" />
 
   - 直接指针（HotSpot 采用 ）
 
-    <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第10章_方式2：使用直接指针访问.jpg" alt="第10章_方式2：使用直接指针访问" style="zoom:33%;" />
+    <img src="JVM上篇配图\第10章_方式2：使用直接指针访问.jpg" alt="第10章_方式2：使用直接指针访问" style="zoom:33%;" />
 
 #### 13、执行引擎
 
@@ -911,7 +906,7 @@
     >
     > `-server` 指定虚拟机运行在 Server 模式下，使用 C2 编译器，C2 进行耗时较长的优化，以及激进优化，优化的代码执行效率高
 
-    <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第12章_程序执行过程.jpg" alt="第12章_程序执行过程" style="zoom:33%;" />
+    <img src="JVM上篇配图\第12章_程序执行过程.jpg" alt="第12章_程序执行过程" style="zoom:33%;" />
 
 - 编译器
 
@@ -953,11 +948,11 @@
       >
       > 方法调用会先检查是否存在 JIT 编译的版本，存在优先使用，不存在计数器加 1，判断计数器值之和是否超阈值，超时向编译器提交该方法的代码编译请求
 
-      <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第12章_方法调用计数器.jpg" alt="第12章_方法调用计数器" style="zoom: 33%;" />
+      <img src="JVM上篇配图\第12章_方法调用计数器.jpg" alt="第12章_方法调用计数器" style="zoom: 33%;" />
 
     - 回边计数器：用于统计循环体执行的循环次数
 
-      <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第12章_回边计数器.jpg" alt="第12章_回边计数器" style="zoom:33%;" />
+      <img src="JVM上篇配图\第12章_回边计数器.jpg" alt="第12章_回边计数器" style="zoom:33%;" />
 
   - 热度衰减
 
@@ -1011,7 +1006,7 @@
   s2 == s3 //jdk6: false jdk7/8: true
   ```
 
-  ![第13章](C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第13章.png)
+  ![第13章](JVM上篇配图\第13章.png)
 
 #### 15、GC
 
@@ -1332,9 +1327,9 @@
     - 并发回收器：CMS、G1（jdk9）
     - jdk9 移除红线，jdk14 移除绿线和绿框，老年代中 CMS 和 Serial Old GC 是备用的关系
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第17章_垃圾收集器组合.jpg" alt="第17章_垃圾收集器组合" style="zoom:33%;" />
+  <img src="JVM上篇配图\第17章_垃圾收集器组合.jpg" alt="第17章_垃圾收集器组合" style="zoom:33%;" />
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第17章_GC对比.png" alt="第17章_GC对比" style="zoom:67%;" />
+  <img src="JVM上篇配图\第17章_GC对比.png" alt="第17章_GC对比" style="zoom:67%;" />
 
   - Serial 回收器（串行、单线程、单核 cpu）
 
@@ -1398,7 +1393,7 @@
     >
     > 无法和 Parallel Scavenge 配合，因为底层框架不同，对应新生代只能选择 ParNew 或 Serial
 
-    <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第17章_CMS.png" alt="第17章_CMS" style="zoom: 80%;" />
+    <img src="JVM上篇配图\第17章_CMS.png" alt="第17章_CMS" style="zoom: 80%;" />
 
     - 过程
 
@@ -1490,7 +1485,7 @@
 
     - 分区：一个 Region 只能属于 Eden、Survivor 等一个区域，回收完就加入空闲列表，Humongous 区域用于存放大对象，超过 1.5 个 Region 就放进去，若一个 H 区放不下会寻找连续的 H 区存放，H 区大多数情况看成老年代
 
-    <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第17章_分区.jpg" alt="第17章_分区" style="zoom: 80%;" />
+    <img src="JVM上篇配图\第17章_分区.jpg" alt="第17章_分区" style="zoom: 80%;" />
 
   - G1 垃圾回收
 
@@ -1506,7 +1501,7 @@
     > - 复制对象（晋升老年代等）
     > - 处理引用（弱强软虚）
 
-    ![第17章_G1集](C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第17章_G1集.jpg)
+    ![第17章_G1集](JVM上篇配图\第17章_G1集.jpg)
 
     - 老年代并发标记（Concurrent Marking）：默认堆使用达到 45% 开始，
 
@@ -1531,7 +1526,7 @@
 
     > 回收时没有足够 to 区存放晋升对象、并发处理完成前内存耗尽
 
-  <img src="C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第17章_G1-GC垃圾回收过程.jpg" alt="第17章_G1-GC垃圾回收过程" style="zoom:33%;" />
+  <img src="JVM上篇配图\第17章_G1-GC垃圾回收过程.jpg" alt="第17章_G1-GC垃圾回收过程" style="zoom:33%;" />
 
   - 新的 GC 回收器
 
@@ -1565,11 +1560,11 @@
 
   - Young GC
 
-  ![第17章_GC调优分析](C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第17章_YGC调优分析.png)
+  ![第17章_GC调优分析](JVM上篇配图\第17章_YGC调优分析.png)
 
   - Full GC
 
-  ![第17章_Full GC调优分析](C:\Users\13085\Desktop\git_work\Java\JVM上篇配图\第17章_Full GC调优分析.jpg)
+  ![第17章_Full GC调优分析](JVM上篇配图\第17章_Full GC调优分析.jpg)
 
   - 日志分析工具：GCViewer、GCEasy
 
