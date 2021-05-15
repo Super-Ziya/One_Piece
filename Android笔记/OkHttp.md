@@ -603,11 +603,20 @@ public Response execute() throws IOException {
   }
   ```
 
-#### 3、CacheInterceptor 过滤器
+#### 3、Bridgeinterceptor 过滤器
 
-- BridgeInterceptor：对 Request 和 Resposne 的封装
-- CacheInterceptor：缓存
+- 对 Request 和 Resposne 的封装
+- 设置内容长度、内容编码
+- 设置 gzip header 压缩，接收到内容后解压，省去应用层处理数据解压的麻烦
+- 添加 cookie
+- 设置其他报头，如 User-Agent、Host、Keep-alive（多路复用）
 
+#### 4、CacheInterceptor 过滤器
+
+- 负责 cache 缓存管理
+- 网络请求有符合要求的 cache 时直接返回
+- 服务器返回内容有改变时更新当前 cache
+- 如果当前 cache 失效，删除
 - 过程细节
 
 ```java
@@ -1122,5 +1131,11 @@ public final class Snapshot implements Closeable {
 }
 ```
 
+#### 5、ConnectInterceptor 拦截器
 
+- 为当前请求找到合适连接，可能复用已有连接或重新创建连接，返回的连接由连接池负责
+
+#### 6、CallServerInterceptor 拦截器
+
+- 向服务器发起真正请求，接收响应时返回
 

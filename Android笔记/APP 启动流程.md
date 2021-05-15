@@ -105,3 +105,167 @@
 - system_server 进程接收到相应 binder 操作后经多次调用，利用 ATP 向 app process 发送 binder 请求，即  `bindApplication()`，system_server 拥有 ATP/AMS，每个新创建进程都有一个相应的 AT/AMP，从而可跨进程互相通信
 
 <img src="Image.assets\APP 启动流程_Binder通信.jpg" alt="APP 启动流程_Binder通信" style="zoom:67%;" />
+
+#### （8）Android开机启动流程
+
+![img](https://upload-images.jianshu.io/upload_images/2929448-29279bde1a08d782.png)
+
+- Boot Rom：引导芯片从固化在 ROM 的预设代码开始执行，然后加载引导程序到 RAM
+
+- BootLoader（引导程序）：在操作系统运行前运行的一段程序（运行的第一个程序）。检查 RAM、初始化硬件参数等功能，最终目的是拉起操作系统
+
+  > 文件路径： /bootable/bootloader/legacy/
+
+  - 主要作用：把操作系统映像文件拷贝到 RAM 中，跳转到其入口处执行，称为启动加载模式，该过程没有用户介入
+
+    - 第一步
+
+      > 1、硬件设备初始化。为第二步的执行及随后内核的执行准备好基本的硬件环境
+      >
+      > 2、为第二步准备 ram 空间。为获得更好的执行速度，通常把第二步加载到 ram 中执行
+      >
+      > 3、复制第二步的代码到 ram 中
+      >
+      > 4、设置好堆栈
+      >
+      > 5、跳转到第二步的 c 程序入口
+
+    - 第二步
+
+      >1、初始化本阶段要使用的硬件设备
+      >
+      >2、检测系统内存映射
+      >
+      >3、将内核映像和根文件系统映像从 flash 读到 ram 中
+      >
+      >4、为内核设置启动参数
+      >
+      >5、调用内核
+
+- 初始化 Kernel：C 语言编写，入口函数是 start_kernel 函数，该函数完成内核的大部分初始化工作。可将其看做内核的main函数。其最后调用了 reset_init 函数进行后续的初始化。该函数主要任务是启动内核线程 kernel_init，kernel_init 函数完成设备驱动程序的初始化，并调用 init_post 函数启动用户空间的 init 进程。init_post 函数结束，内核初始化基本完成
+
+  > 文件路径：/kernel_imx/init/main.c
+
+- init 进程（祖先进程）：Linux 中所有进程都由 init 进程直接或间接 fork 出来的。init 进程负责创建系统中最关键的几个子进程，尤其是 zygote。还提供 property service（属性服务），类似 windows 系统的注册表服务
+
+  - Android 系统中有个 init.rc 脚本。init 进程启动会读取并解析该脚本文件，把其中的元素整理成自己的数据结构（链表）
+
+  > 文件路径：
+  >  /system/core/init/init.c
+  >  /system/core/rootdir/init.rc
+  >  /system/core/init/readme.txt
+
+- Zygote 进程：init 进程创建后 fork 出来的，该进程是所有 Java 进程的父进程，会 fork 出一个 Zygote Java 进程用来 fork 出其他进程。zygote 开启时会调用 `ZygoteInit.main()` 进行初始化
+
+```java
+public static void main(String argv[]) {
+    //...
+    // 加载zygote的时候，会传入参数，startSystemServer变为true
+    boolean startSystemServer = false;
+    for (int i=1;i<argv.length;i++) {
+        if ("start-system-server".equals(argv[i])) {
+            startSystemServer = true;
+        }else if (argv[i].startsWith(ABI_LIST_ARG)) {
+            abiList = argv[i].substring(ABI_LIST_ARG.length());
+        }else if (argv[i].startsWith(SOCKET_NAME_ARG)) {
+            socketName = argv[i].substring(SOCKET_NAME_ARG.length());
+        }else {
+            throw new RuntimeException("Unknown command line argument: " + argv[i]);
+        }
+    }
+    //...
+    // 启动的SystemServer进程
+    if (startSystemServer) {
+        startSystemServer(abiList, socketName);
+    }
+    //...
+}
+```
+
+> 文件路径：/frameworks/base/core/java/com/android/internal/os/ZygoteInit.java
+
+- SystemServer 进程：ZygoteInit.java 通过 `startSystemServer()` fork 出 SystemServer 进程，和 Zygote 进程是 Android Framework 层的两大重要进程。系统重要的服务都在该进程开启，如 AMS、WindowsManager、PackageManagerService 等，SystemServer 进程开启时会初始化 ActivityManagerService、加载本地系统的服务库，调用 `createSystemContext()` 创建系统上下文，创建 ActivityThread 及开启各种服务等
+
+```java
+public final class SystemServer {
+    // The main entry point from zygote.
+    public static void main(String[] args) {
+        new SystemServer().run();
+    }
+    
+    public SystemServer() {
+        // Check for factory test mode.
+        mFactoryTestMode = FactoryTest.getMode();
+    }
+    
+    private void run() {
+        //...
+        // 初始化原生服务库
+        System.loadLibrary("android_servers");
+        nativeInit();
+        // 初始化系统上下文
+        createSystemContext();
+        // 创建SystemServiceManager对象
+        mSystemServiceManager = new SystemServiceManager(mSystemContext);
+        // 开启服务
+        try {
+            startBootstrapServices();
+            startCoreServices();
+            startOtherServices();
+        } catch (Throwable ex) {
+            Slog.e("System", "******************************************");
+            Slog.e("System", "************ Failure starting system services", ex);
+            throw ex;
+        }
+        //...
+        // Loop forever.
+        Looper.loop();
+        throw new RuntimeException("Main thread loop unexpectedly exited");
+    }
+    
+    //初始化系统上下文对象mSystemContext，并设置默认的主题。
+    private void createSystemContext() {
+        ActivityThread activityThread = ActivityThread.systemMain();
+        mSystemContext = activityThread.getSystemContext();
+        mSystemContext.setTheme(android.R.style.Theme_DeviceDefault_Light_DarkActionBar);
+    }
+
+    //在这里开启了几个核心的服务，因为这些服务之间相互依赖，所以都放在了这个方法里面。
+    private void startBootstrapServices() {
+        //...
+        //初始化ActivityManagerService
+        mActivityManagerService = mSystemServiceManager
+            .startService(ActivityManagerService.Lifecycle.class).getService();
+        mActivityManagerService.setSystemServiceManager(mSystemServiceManager);
+        //初始化PowerManagerService，因为其他服务需要依赖这个Service，因此需要尽快的初始化
+        mPowerManagerService = mSystemServiceManager.startService(PowerManagerService.class);
+        // 现在电源管理已经开启，ActivityManagerService负责电源管理功能
+        mActivityManagerService.initPowerManagement();
+        // 开启DisplayManagerService
+        mDisplayManagerService = mSystemServiceManager.startService(DisplayManagerService.class);
+        // 开启PackageManagerService
+        mPackageManagerService = PackageManagerService.main(mSystemContext,mInstaller, mFactoryTestMode != FactoryTest.FACTORY_TEST_OFF, mOnlyCore);
+        //...
+    }
+    private void startCoreServices() {...}// 启动一些基本服务。
+    private void startOtherServices() {...}// 启动其他服务。
+}
+```
+
+> 文件路径：/frameworks/base/services/java/com/android/server/SystemServer.java
+
+- Home Activity：ActivityManagerService 开启后会调用 `finishBooting()` ，完成引导过程。同时发送开机广播 ACTION_BOOT_COMPLETED，之后开启系统主程序（Launcher 程序），完成系统界面的加载与显示
+
+```java
+final void finishBooting() {
+    //...
+    final int userId = mStartedUsers.keyAt(i);
+    Intent intent = new Intent(Intent.ACTION_BOOT_COMPLETED, null);
+    intent.putExtra(Intent.EXTRA_USER_HANDLE, userId);
+    intent.addFlags(Intent.FLAG_RECEIVER_NO_ABORT);
+    broadcastIntentLocked(...);
+    //...
+}
+```
+
+> 文件路径：/frameworks/base/services/java/com/android/server/am/ActivityManagerService.java

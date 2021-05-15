@@ -16,7 +16,7 @@
   //ActivityThread.main 方法
   public static void main(String[] args) {
       ......
-      //调用Looper.prepareMainLooper，就是调用 Looper.loop，初始化 Looper、MessageQueue 等
+      //调用Looper.prepareMainLooper，调用Looper.loop，初始化Looper、MessageQueue等（当前线程）
       Looper.prepareMainLooper();
       //创建 ActivityThread 同时，初始化成员变量 Handler mH
       ActivityThread thread = new ActivityThread();
