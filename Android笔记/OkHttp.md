@@ -262,7 +262,7 @@ public Request build() {
 
 - 过滤器（高内聚，低耦合，可拓展）
 
-  - retryAndFollowUpIntercepto：失败和重定向过滤器
+  - retryAndFollowUpInterceptor：失败和重定向过滤器
   - BridgeInterceptor：封装 request 和 response 过滤器
   - CacheInterceptor：缓存相关的过滤器，负责读取缓存直接返回、更新缓存
   - ConnectInterceptor：负责和服务器建立连接，连接池等
@@ -603,7 +603,7 @@ public Response execute() throws IOException {
   }
   ```
 
-#### 3、Bridgeinterceptor 过滤器
+#### 3、BridgeInterceptor 过滤器
 
 - 对 Request 和 Resposne 的封装
 - 设置内容长度、内容编码

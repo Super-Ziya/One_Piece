@@ -38,6 +38,24 @@
   - 使用简单
     - 采用 Client/Server 架构
     - 实现面向对象的调用方式，即使用 Binder 时和调用一个本地对象实例一样
+  
+- IPC比较
+
+  |      | Binder                         | 共享内存                         | Socket                                    |
+  | ---- | ------------------------------ | -------------------------------- | ----------------------------------------- |
+  | 性能 | 拷贝一次                       | 零拷贝                           | 拷贝两次                                  |
+  | 特点 | 基于C/S架构，易用性高          | 控制复杂，易用性差               | 基于C/S架构，通用接口，传输效率低，开销大 |
+  | 安全 | 为每个App分配UID，支持实名匿名 | 依赖上层协议，接入点开放，不安全 | 依赖上层协议，接入点开放，不安全          |
+
+  - 传统IPC：2次copy
+
+  <img src="C:\Users\13085\AppData\Roaming\Typora\typora-user-images\image-20210701164526808.png" alt="image-20210701164526808" style="zoom:50%;" />
+
+  - Binder：1次copy，memory map（mmap，内存映射）
+
+  <img src="C:\Users\13085\AppData\Roaming\Typora\typora-user-images\image-20210701164646961.png" alt="image-20210701164646961" style="zoom:50%;" />
+
+  - 共享内存：不用copy，发送和接收都映射在同一块物理地址，缺点是容易数据不同步，而Binder基于C/S架构
 
 #### 2、使用步骤：
 
@@ -167,5 +185,34 @@
 - Binder 同步、异步交互：一个 Binder 实体只要有一个异步交互没处理完，接下来发给该实体的异步交互包不再投递到 to-do 队列中，而是阻塞在驱动为该实体开辟的异步交互接收队列中（Binder 节点的 async_todo 域），这期间同步交互不受限制直接进入 to-do 队列获得处理，直到该异步交互处理完毕，下个异步交互方可脱离异步交互队列进入 to-do 队列中
   
   - 理由：因为同步交互的请求端需等待返回包，须迅速处理以免影响请求端响应速度，而异步交互稍微延时不会阻塞其它线程。所以用专门队列将过多的异步交互暂存，以免突发大量异步交互挤占 Server 端的处理能力或耗尽线程池里的线程，阻塞同步交互
-  
-  
+
+#### 7、AIDL
+
+- 两个内部类Stub（抽象类，负责接收，继承Binder，实现自定义aidl接口）、Proxy（负责发送，实现自定义aidl接口）
+
+- 服务端重写Stub类，实现方法，在 `onBind()` 返回
+
+- 客户端生成的AIDL接口类继承自IInterface，通过 `Stub.asInterface(IBinder)` 方法拿到服务端Stub对象，该方法里先判断IBinder是否和客户端在同一个进程，是就直接返回，不是就返回Proxy，客户端通过该方法获得Stub对象调用其方法，该方法中AIDL进行打包后请求服务端的transact，调用服务端的Stub的onTransact，通过switch判断调用的方法，调用到服务端重写实现的方法
+
+  <img src="C:\Users\13085\AppData\Roaming\Typora\typora-user-images\image-20210701182418701.png" alt="image-20210701182418701" style="zoom:50%;" />
+
+- 连接流程
+
+  - 过程
+    - 客户端 bindService
+    - -- ContextImpl（Context实现类）的bindService -- bindServiceCommon
+    - -- ActivityManagerProxy的bindService -- transact
+    - -- ActivityManagerNative的onTransact
+    - -- ActivityManagerService的bindService
+    - -- ActivityServices的bindServiceLocked -- bringUpServiceLocked（创建服务）
+      -- requestServiceBindingLocked（绑定服务，true为绑定过，直接调用onRebind，false为没绑定过，调用OnBind）
+    - -- ActivityThread的scheduleBindService -- `sendMessage(H.BIND_SERVICE)` 
+      -- handleBindService -- 获取注册过的服务 -- onBind/onRebind
+    - -- ActivityManagerService的publicService -- `c.conn.connected(r.name,service)`
+    - -- 客户端的onServiceConnected
+  - bindServiceCommon：`ActivityManagerNative.getDefault().bindService`
+    - getDefault得到IActivityManager（相当于自定义AIDL，继承自IInterface，AMS服务） 
+    - ActivityManagerProxy（相当于Proxy，继承自IActivityManager）
+    - ActivityManagerNative（相当于Stub，继承自Binder，实现了IActivityManager）
+    - ActivityManagerService（继承自ActivityManagerNative，重写了Stub的方法，与服务端一样）
+  - `getSystemService(Context.Service)` 可以得到AMS

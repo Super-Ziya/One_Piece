@@ -4,6 +4,14 @@
 
 - 产生原因：根本原因是 APP 阻塞了 UI 线程。android 系统中每个 App 只有一个 UI 线程，在 App 创建时默认生成，UI 线程默认初始化一个消息循环来处理 UI 消息，ANR 往往就是处理 UI 消息超时
 
+- 类型：
+
+  > Service与Bradcast只会打印trace信息，不会提示用户ANR弹窗，大部分可感知的ANR都是由于InputEvent
+
+  - KeyDispatchTimeout(5 seconds) –主要类型：按键或触摸事件在特定时间内无响应
+  - BroadcastTimeout(10 seconds)：BroadcastReceiver在特定时间内无法处理完成
+  - ServiceTimeout(20 seconds) –小概率类型：Service在特定的时间内无法处理完成
+
 - UI 消息来源：
 
   - AMS 的回调消息：AMS 负责管理应用程序四大组件生命周期，当 AMS 对应用程序组件的生命周期进行回调超过 AMS 定义的响应时间时报 ANR。一般是因为在这些组件的回调函数里进行了耗时操作（如网络操作、SD 卡文件操作、数据库操作、大量计算等），AMS 对组件常见的回调函数及超时时间如下：
@@ -24,46 +32,34 @@
   - UI 线程尽量只做跟 UI 相关的工作，一些复杂的 UI 操作需要技巧处理，如让一个 Button 去 setText 一个 10M 的文本，UI 肯定崩掉了，分段加载貌似是最好的方法
   -  耗时工作（如数据库操作，I/O，连接网络或者别的有可能阻碍 UI 线程的操作）放入单独的线程处理
   -  尽量用 Handler 来处理 UIthread 和别的 thread 之间的交互
+  
+- 常用场景
 
-### WMS（WindowManagerService）
+  - UI线程等待其它线程释放某个锁，导致UI线程无法处理用户输入
+  - 游戏中每帧动画都进行了比较耗时的大量计算，导致CPU忙不过来
+  - Web应用中网络状态不稳定，而界面在等待网络数据
+  - UI线程中进行了一些磁盘IO（包括数据库、SD卡等等）的操作，在个别设备上因为硬件损坏等原因阻塞住了
+  - 手机被其他App占用着CPU，自己获取不到足够的CPU 时间片，纯属误伤
 
-> AMS、WMS 都属于 Android 的系统服务
+- 通过ANR 日志定位问题：当ANR发生时，通过Logcat和traces文件（目录/data/anr/）的相关信息输出去定位问题，主要包含：
 
-- Activity 与 Window
+  - 基本信息，包括进程名、进程号、包名、系统build号、ANR 类型等
+  - CPU使用信息，包括活跃进程的CPU 平均占用率、IO情况等
+  - 线程堆栈信息，所属进程包括发生ANR的进程、其父进程、最近有活动的3个进程等等
 
-  - Activity 只负责生命周期和事件处理
-  - Window 只控制视图
-  - 一个 Activity 包含一个 Window，没有 Window 就相当于 Service
+- 导出ANR文件：
 
-- AMS 与 WMS
+  ```
+  // ANR发生后导出ANR文件：
+  adb pull data/anr/traces.txt 存储路径
+  
+  //生成
+  adb bugreport
+  //导出
+  adb pull 文件路径 存储路径
+  ```
 
-  - AMS 统一调度所有应用程序的 Activity
-  - WMS 控制所有 Window 的显示与隐藏以及要显示的位置
+- 检测工具
 
-- WMS 作用
-
-  - 为所有窗口分配 Surface，客户端向 WMS 添加一个窗口的过程就是 WMS 为其分配一块 Surface 的过程，一块块 Surface 在 WMS 的管理下有序排布在屏幕上
-  - 管理 Surface 显示顺序、尺寸、位置
-  - 管理窗口动画
-  - 输入系统相关：WMS 派发系统按键和触摸消息，当接收一个触摸事件时寻找最合适的窗口来处理消息
-
-- 设计模式——桥接模式
-
-  ![WMS模式](Image.assets\WMS模式.png)
-
-### AMS
-
-- 作用
-
-  - 统一调度所有应用程序的 Activity 的生命周期
-  - 启动或杀死应用程序的进程
-  - 启动并调度 Service 的生命周期
-  - 注册 BroadcastReceiver，并接收和分发 Broadcast
-  - 启动并发布 ContentProvider
-  - 调度 task
-  - 处理应用程序的 Crash
-  - 查询系统当前运行状态
-
-- 设计模式——代理模式
-
-  ![AMS模式](Image.assets\AMS模式.png)
+  - FileObserver：监听ANR目录的变化
+  - ANR-WatchDod：监听并打印ANR堆栈信息

@@ -2873,7 +2873,7 @@ ObjectAnimator 继承自 ValueAnimator
 ValueAnimator 不提供动画效果，像一个数值发生器，用来产生具有一定规律的数字，让调用者控制动画的实现过程，通常情况下在 ValueAnimator 的 AnimatorUpdatcListener 中监听数值的变换，完成动画变换
 
 ```java
-ValucAnimator animator = ValucAnimator.ofFloat(0,100);
+ValueAnimator animator = ValueAnimator.ofFloat(0,100);
 animator.setTarget(view);
 animator.setDuration(1000).start();
 animator.addUpdateListener(new AnimatorUpdateListener(){
@@ -3560,8 +3560,7 @@ VSYNC 时间16ms，需尽量将所有条形图控制在这条绿线之下
 
 **（2）避免 Overdraw**
 
-Overdraw 过度绘制会浪费很多 CPU、GPU 资源，例如系统默认会绘制 Activity 背景，而如果再给布局绘制重叠的背景，那么默认 Activity 背景属于无效过度绘
-制 —— Overdraw。Android 系统在开发者选项中提供检测工具 Enablc GPU Overdraw。激活后可通过界面上颜色判断 Overdraw 的次数，应尽量增大蓝色区域、减少红色区域
+Overdraw 过度绘制会浪费很多 CPU、GPU 资源，例如系统默认会绘制 Activity 背景，而如果再给布局绘制重叠的背景，那么默认 Activity 背景属于无效过度绘制 —— Overdraw。Android 系统在开发者选项中提供检测工具 Enablc GPU Overdraw。激活后可通过界面上颜色判断 Overdraw 的次数，应尽量增大蓝色区域、减少红色区域
 
 **（3）优化布局层级**
 

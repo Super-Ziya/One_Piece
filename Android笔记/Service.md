@@ -59,7 +59,7 @@
   - 实现
     - Server 端：
     - 在 Service 的 `onBind()` 中返回 IBinder 类型实例
-    - `onBInd()` 返回的 IBinder 实例要能够返回 Service 实例本身。最简单的方法是在 service 中创建 binder 内部类，加入类似 `getService()` 返回 Service，绑定的 client 可通过 `getService()` 获得 Service 实例
+    - `onBind()` 返回的 IBinder 实例要能够返回 Service 实例本身。最简单的方法是在 service 中创建 binder 内部类，加入类似 `getService()` 返回 Service，绑定的 client 可通过 `getService()` 获得 Service 实例
     - client 端：
     - 创建 ServiceConnection 类型实例，重写 `onServiceConnected()` 、`onServiceDisconnected()` 
     - 执行到 onServiceConnected 回调时，通过 IBinder 实例得到 Service 实例对象，可实现 client 与 Service 的连接

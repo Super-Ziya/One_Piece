@@ -189,21 +189,21 @@ if(i in 1..10){ //等同 1 <= i && i <= 10
 for(i in 1..4 step 2) print(i) //输出 13
 for(i in 4 downTo 1 step 2) print(i) //输出 42
 //使用 until 函数排除结束元素
-for(i in 1 until 10){ //i in [1,10} 排除了10
+for(i in 1 until 10){ //i in [1,10) 排除了10
     println(i)
 }
 ```
 
 #### 二、基本数据类型
 
-| 类型  | 位宽度 |
-| ----- | ------ |
-| Doub  | 64     |
-| Float | 32     |
-| Long  | 64     |
-| Int   | 32     |
-| Short | 16     |
-| Byte  | 8      |
+| 类型   | 位宽度 |
+| ------ | ------ |
+| Double | 64     |
+| Float  | 32     |
+| Long   | 64     |
+| Int    | 32     |
+| Short  | 16     |
+| Byte   | 8      |
 
 > 不同于 Java 的是，字符不属于数值类型，是一个独立的数据类型
 
@@ -305,8 +305,10 @@ val b = Array(3,{i -> (i*2)}) //[0,2,4]
 ```
 
 > 与 Java 不同的是，Kotlin 中数组是不协变的（invariant）
+>
+> 数组的协变性：如果类Base是类Sub的基类，那么Base[]是Sub[]的基类
 
-- 有各个类型的数组，省去了装箱操作，效率更高
+- 有各个类型的数组，省去装箱操作，效率更高
 
 ```kotlin
 val x:IntArray = intArrayOf(1,2,3)
@@ -326,9 +328,9 @@ for(c in str){
 }
 ```
 
-- 多行字符串：
 - 删除多余空白：
   - 方法：`trimMargin()` 
+- 多行字符串：
 
 ```kotlin
 val text = """
@@ -570,7 +572,7 @@ site.name
 
 ```kotlin
 class Person constructor(firstName:String){}
-//主构造器没有注解，没有任何可见度修饰符，constructor 关键字可以省略
+//主构造器没有注解、没有任何可见度修饰符时constructor关键字可以省略：
 class Person(firstName:String){}
 ```
 
@@ -955,6 +957,8 @@ val Foo.bar = 1 //错误，扩展属性不能有初始化器
 ##### 4、伴生对象的扩展
 
 - 通过 "类名." 形式调用伴生对象，伴生对象声明的扩展函数，通过用类名限定符来调用
+- 伴生对象弥补kotlin没有static的缺陷
+- `object` 关键字定义一个类同时创建一个实例
 
 ```kotlin
 class MyClass{
@@ -1120,11 +1124,12 @@ val (name,age) = jane
 
 ##### 4、密封类
 
-> 密封类用来表示受限的类继承结构：当一个值为有限几种的类型, 而不能有任何其他类型时。在某种意义上，他们是枚举类的扩展：枚举类型的值集合是受限的，每个枚举常量只存在一个实例，而密封类的一个子类可以有可包含状态的多个实例
+> 密封类用来表示受限的类继承结构：一个值为有限几种的类型, 不能有任何其他类型时
+>
+> 枚举类的扩展：枚举类型的值集合是受限的，每个枚举常量只存在一个实例，而密封类的一个子类可以有可包含状态的多个实例
 >
 > 密封类可以有子类，但是所有的子类都必须要内嵌在密封类中
 >
-> 
 
 - 使用 `sealed` 修饰
   - `sealed` 不能修饰 `interface`、`abstract class`（会报 warning，但不会出现编译错误）
@@ -1139,7 +1144,7 @@ fun eval(expr: Expr): Double = when(expr){
     is Const -> expr.number
     is Sum -> eval(expr.e1) + eval(expr.e2)
     NotANumber -> Double.NaN
-    //不需要 else 子句，已经覆盖了所有情况
+    //使用密封类的好处：不需要else子句，已经覆盖了所有情况
 }
 ```
 
@@ -1211,7 +1216,7 @@ fun<T> copyWhenGreater(list: List<T>,threshold: T): List<String> where T: CharSe
       var strCo: Runoob<String> = Runoob("a")
       var anyCo: Runoob<Any> = Runoob<Any>("b")
       anyCo = strCo
-      println(anyCo.foo() //输出 a
+      println(anyCo.foo()) //输出 a
   }
   ```
 
@@ -1502,7 +1507,6 @@ val x = MyClass.Companion
 
 > 类委托：一个类中定义的方法实际是调用另一个类的对象的方法来实现的
 >
-> 
 
 ```kotlin
 interface Base{

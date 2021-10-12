@@ -449,6 +449,53 @@ public class TestReadwriteLock{
   - `ExecutorService newCachedThreadPool()`：缓存线程池，线程池数量不固定，可根据需求自动更改
   - `ExecutorService newSingleThreadExecutor()`：创建单个线程池，线程池中只有一个线程
   - `ScheduledExecutorService newScheduledThreadPool()`：创建固定大小线程池，可延迟、定时执行任务
+  
+- 参数
+
+  - corePoolSize：线程池核心线程大小
+
+    - 即使核心线程处于空闲状态也不会被销毁，除非设置 allowCoreThreadTimeOut
+
+  - maximumPoolSize：线程池最大线程数量
+
+    - 一个任务被提交到线程池后，先找有无空闲存活线程，有则直接将任务交给该空闲线程，没有则缓存到工作队列中，工作队列满了才创建一个新线程，然后从工作队列头部取出一个任务交由新线程处理，将刚提交的任务放入工作队列尾部
+    - 线程池不会无限制创建新线程，有一个最大线程数量限制
+
+  - keepAliveTime：空闲线程存活时间
+
+    - 一个线程如果处于空闲状态，且当前线程数量大于 corePoolSize，在 keepAliveTime 后，该空闲线程会被销毁
+
+  - unit：空闲线程存活时间单位：keepAliveTime 的计量单位
+
+  - workQueue：工作队列
+
+    - 新任务被提交后先进入此工作队列中，任务调度时再从队列中取出任务，jdk 提供四种工作队列
+
+      > ArrayBlockingQueue：基于数组，有界，FIFO，可防止资源耗尽。当线程池线程数量达到 corePoolSize 后，有新任务进来会将任务放入该队列队尾，等待被调度。如果队列已满，则创建一个新线程，如果线程数量已达 maxPoolSize，执行拒绝策略
+      >
+      > LinkedBlockingQuene：基于链表，无界（最大容量 Interger.MAX），FIFO。由于近似无界，当线程池线程数量达到 corePoolSize 后，有新任务进来会一直存入该队列而不去创建新线程直到 maxPoolSize，参数 maxPoolSize 不起作用
+      >
+      > SynchronousQuene：不缓存任务，新任务进来时不缓存，直接被调度执行该任务，如果无可用线程，创建新线程，如果线程数达到 maxPoolSize，执行拒绝策略
+      >
+      > PriorityBlockingQueue：有优先级，无界，优先级通过参数 Comparator 实现
+
+  - threadFactory：线程工厂，创建新线程使用的工厂，可设定线程名、是否为 daemon（守护）线程等
+
+  - handler：拒绝策略
+
+    - 当工作队列中任务已达最大限制，且线程池中线程数量达最大限制，如果有新任务提交，执行拒绝策略，jdk 提供 4 种拒绝策略
+
+      > CallerRunsPolicy：在调用者线程中直接执行被拒绝任务的 run 方法，除非线程池已 shutdown，则抛弃任务
+      >
+      > AbortPolicy：丢弃任务，抛出 RejectedExecutionException 异常
+      >
+      > DiscardPolicy：丢弃任务，什么都不做
+      >
+      > DiscardOldestPolicy：抛弃进入队列最早的任务，尝试把拒绝的任务放入队列
+      >
+      > 该策略下，抛弃进入队列最早的那个任务，然后尝试把这次拒绝的任务放入队列
+      >
+      > 该策略下，直接丢弃任务，什么都不做。
 
 
 

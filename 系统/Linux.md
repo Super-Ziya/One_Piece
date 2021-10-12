@@ -1,4 +1,4 @@
-### Linux
+###  Linux
 
 ####1、xshell
 
@@ -191,105 +191,48 @@
 
 ##### （1）select
 
-- 把 readset 和 writeset 的文件描述符对应位置 1，交给 `select()` 系统调用判断哪个文件描述符打开（将读/写文件描述符集合从用户态拷贝到内核态中，在内核中判断事件来临，会阻塞），如果某个 fd 不可读/写，该位置 0，如果可读，数组中仍然为 1，系统调用后返回可读可写的数量和
-- 循环遍历所有文件描述符用 FD_ISSET() 判断是否进行读写操作
-- 有数据来临，FD 置位（不可重用），select 返回（不阻塞）
-
-```c
-int FD_ISSET(int fd,fd_set *fdset);  //返回值：若fd在文件描述符集中，返回非0值；否则，返回0
-void FD_CLR(int fd,fd_set *fdset);   //清除最后一位
-void FD_SET(int fd,fd_set *fdset);   //开启描述符中的一位
-void FD_ZERO(fd_set *fdset);         //所有描述符位置位0
-
-while(1){
-    FD_ZERO(&rset);
-    for(i=0;i<5;i+r){
-        //&rset是文件描述符集合
-        //如五个文件描述符存的12346，则&rset为0111101（有1024位）
-	    FD_SET(fds[i],&rset);
-    }
-	//文件描述符最大值+1，读文件描述符集合，写文件描述符集合，异常文件描述符集合，超时时间
-    //int select(int maxfpd1,fdset *read_fds,fdset *write_fds,fdset *exception_fds,struct timeval *restrict tvpr);
-    select(max+1,&rset,NULL,NULL,NULL);//会阻塞
-    for(i=0;i<5;i++){//再遍历
-	    if(FD_ISSET(fds[i],&rset)){
-		    memset(buffer,0,MAXBUF);
-		    read(fds[i],buffer,MAXBUF);
-            puts(buffer);
-    }
-}
-```
+- 调用过程：
+  - 使用copy_from_user从用户空间拷贝fd_set到内核空间
+  - 注册回调函数__pollwait
+  - 遍历所有fd，调用其对应的poll方法（对于socket，这个poll方法是sock_poll，sock_poll根据情况会调用到tcp_poll,udp_poll或者datagram_poll）
+  - 以tcp_poll为例，其核心实现就是__pollwait，也就是上面注册的回调函数
+  - __pollwait的主要工作就是把current（当前进程）挂到设备的等待队列中，不同的设备有不同的等待队列，对于tcp_poll来说，其等待队列是sk->sk_sleep（注意把进程挂到等待队列中并不代表进程已经睡眠了）。在设备收到一条消息（网络设备）或填写完文件数据（磁盘设备）后，会唤醒设备等待队列上睡眠的进程，这时current便被唤醒了
+  - poll方法返回时会返回一个描述读写操作是否就绪的mask掩码，根据这个mask掩码给fd_set赋值
+  - 如果遍历完所有的fd，还没有返回一个可读写的mask掩码，则会调用schedule_timeout是调用select的进程（也就是current）进入睡眠。当设备驱动发生自身资源可读写后，会唤醒其等待队列上睡眠的进程。如果超过一定的超时时间（schedule_timeout指定），还是没人唤醒，则调用select的进程会重新被唤醒获得CPU，进而重新遍历fd，判断有没有就绪的fd
+  - 把fd_set从内核空间拷贝到用户空间
+- select本质上是通过设置或者检查存放fd标志位的数据结构来进行下一步处理
 
 - 优点：一次系统调用把所有 fds 传给内核，减少 BIO 多次调用的开销（假设 1000 个连接只有一个发来数据，BIO 需向内核发送 1000 次系统调用，999 次无意义，消耗时间和内存资源）
 - 缺点
-  - 最大文件描述符编号为 1024
-  - 直接在 readset、writeset 做修改，不可重用
-  - 用户态到内核态的切换开销
-  - 不能返回哪位有事件，需再遍历
+  - 单个进程可监视的fd数量被限制，即能监听端口的大小有限
+  - 对socket进行扫描时是线性扫描，即采用轮询的方法，效率较低：
+    
+    - 每次调用select，都需要把fd集合从用户态拷贝到内核态，这个开销在fd很多时会很大
+    - 同时每次调用select都需要在内核遍历传递进来的所有fd，这个开销在fd很多时也很大
+  - 需要维护一个用来存放大量fd的数据结构，这样会使得用户空间和内核空间在传递该结构时复制开销大
+
+![img](https://images2018.cnblogs.com/blog/137084/201806/137084-20180611142415772-1018872947.png)
 
 ##### （2）poll
 
-- 将rset从用户态拷贝到内核态中，在内核中判断事件来临（会阻塞）
-- 有数据来临，pollfd.revents置位，poll返回（不阻塞）
+- 和select比较：
+  - 描述fd集合的方式不同，poll使用pollfd结构，select的fd_set结构
+  - 管理多个描述符也是进行轮询
+  - 没有最大文件描述符数量的限制
+  - 本质和select没有区别，将用户传入的数组拷贝到内核空间，查询每个fd对应的设备状态，如果设备就绪则在设备等待队列中加入一项并继续遍历，如果遍历完所有fd后没有发现就绪设备，则挂起当前进程，直到设备就绪或者主动超时，被唤醒后它又要再次遍历fd。这个过程经历了多次无谓的遍历
+  - 没有最大连接数的限制，原因是基于链表来存储
 
-```c
-struct pollfd{
-	int fd;
-	short events;//在意的事件（POLLIN读、POLLOUT写）
-    short revents;//events的回馈，默认0
-}
-
-while(1){
-    puts("round again");
-	//pollfd数组，元素个数，超时时间
-    //int poll(struct pollfd fdarry[],nfds_t nfds,int timeout);
-    poll(pollfds,5,50000);//会阻塞
-    for(i=0;i<5;i++){//再遍历
-	    if(pollfds[i].revents & POLLIN){
-		    pollfds[i].revents = 0;//置0，可重用
-		    memset(buffer,0,MAXBUF);
-		    read(pollfds[i].fd,buffer,MAXBUF);
-            puts(buffer);
-        }
-    }
-}
-```
-
-- 优点
-  - 内核操作的是结构体的 revents 字段，没有破坏其他字段，可复用
-  - 没有 select 最大支持 1024 个文件描述符的限制
 - 缺点
   - 每次 poll 都要重新遍历全量 fds
-  - 不能返回哪位有事件，需再遍历
+  - 和select一样，大量的fd的数组被整体复制于用户态和内核地址空间之间，而不管这样的复制是不是有意义
+  - “水平触发”，如果报告了fd后，没有被处理，那么下次poll时会再次报告该fd
 
 ##### （3）epoll
 
 ![Linux_epoll](图片.assets\Linux_epoll.png)
 
 - Linux 特有
-- 把文件描述符放到内核一个事件表中，epoll 需用一个额外文件描述符表示内核中的事件表
-
-```c
-struct epoll_event{
-    _uint32_t events; //epoll事件，读、写、异常三种
-    epoll_data_t data; //用户数据
-}
-struct epoll_data{
-    void* prt;
-    int fd;
-    _uint32_t u32;
-    _uint64_t u64;
-}epoll_data_t;
-
-int epoll_create(int size);//返回一个文件描述符，描述的是内核中一块内存区域，size现在不起作用
-//用来操作内核事件表，epfd表示epoll_create()返回的事件表，fd表示新创建的socket文件描述符
-//op:
-//EPOLL_CTL_ADD：事件表中添加一个文件描述符，内核应关注的socket事件在epoll_event结构体中，添加到事件表的文件描述符以红黑树形式存在，防止重复添加
-//EPOLL_CTL_MOD：修改fd上注册的事件
-//EPOLL_CTL_DEL：删除fd上注册的事件
-int epoll_ctl(int epfd,int op,int fd,struct epoll_event *event);
-int epoll_wait(int epfd,struct epoll_event * events,int maxevents,int timeout);//返回就绪文件描述符个数
-```
+- 使用“事件”的就绪通知方式，通过epoll_ctl注册fd，一旦该fd就绪，内核就会采用类似callback的回调机制来激活该fd，epoll_wait便可以收到通知
 
 - 工作模式
   - LT
@@ -298,3 +241,97 @@ int epoll_wait(int epfd,struct epoll_event * events,int maxevents,int timeout);/
   - ET
     - fd 可读后，如果服务程序读走一部分就结束此次读取，ET 模式下该文件描述符不可读，需等到下次数据到达时才变为可读，要保证循环读取数据，确保把所有数据读出
     - fd 可写后，如果服务程序写了一部分就结束此次写入，ET 模式下该文件描述符不可写，要写入数据，确保把数据写满
+  
+- 优点：
+
+  - 没有最大并发连接的限制，能打开的FD的上限远大于1024（1G的内存上能监听约10万个端口）
+  - 效率提升，不是轮询的方式，不会随着FD数目的增加效率下降。只有活跃可用的FD才会调用callback函数
+  - 只管“活跃”的连接，跟连接总数无关，在实际的网络环境中，效率就会远远高于select和poll
+  - 内存拷贝：利用mmap()文件映射内存加速与内核空间的消息传递，epoll使用mmap减少复制开销
+
+- 相比select、poll：
+
+  - 调用接口上，select和poll都只提供了一个函数——select或者poll函数。而epoll提供了三个函数，epoll_create（创建一个epoll句柄）、epoll_ctl（注册要监听的事件类型）、epoll_wait（等待事件的产生）
+    - epoll_ctl函数：每次注册新的事件到epoll句柄中时（在epoll_ctl中指定EPOLL_CTL_ADD），把所有的fd拷贝进内核，而不是在epoll_wait的时候重复拷贝。保证了每个fd在整个过程中只会拷贝一次
+    - 不像select或poll一样每次都把current轮流加入fd对应的设备等待队列中，而只在epoll_ctl时把current挂一遍（这一遍必不可少）并为每个fd指定一个回调函数，当设备就绪，唤醒等待队列上的等待者时，调用这个回调函数，回调函数会把就绪的fd加入一个就绪链表。epoll_wait在这个就绪链表中查看有没有就绪的fd（利用schedule_timeout()实现睡一会，判断一会的效果，和select实现中的第7步是类似的）
+    - 没有FD个数限制
+
+- 机制
+
+  - 设计：在Linux内核中申请一个简易的文件系统(文件系统一般用B+树)
+
+    - 调用epoll_create() 建立一个epoll对象(在epoll文件系统中为这个句柄对象分配资源)
+    - 调用epoll_ctl向epoll对象中添加连接的套接字
+    - 调用epoll_wait收集      发生的事件的连接
+
+  - 当某一进程调用epoll_create方法时，Linux内核会创建一个eventpoll结构体，这个结构体中有两个成员与epoll的使用方式密切相关。eventpoll结构体：
+
+    ```c
+    struct eventpoll{
+        ....
+        /*红黑树的根节点，这颗树中存储着所有添加到epoll中的需要监控的事件*/
+        struct rb_root  rbr;
+        /*双链表中则存放着将要通过epoll_wait返回给用户的满足条件的事件*/
+        struct list_head rdlist;
+        ....
+    };
+    ```
+
+  - 每一个epoll对象都有一个独立的eventpoll结构体，用于存放通过epoll_ctl方法向epoll对象中添加进来的事件。这些事件都会挂载在红黑树中，如此，重复添加的事件就可以通过红黑树而高效的识别出来(红黑树的插入时间效率是lgn，其中n为树的高度)
+
+  - 所有添加到epoll中的事件都会与设备(网卡)驱动程序建立回调关系，也就是说，当相应的事件发生时会调用这个回调方法。这个回调方法在内核中叫ep_poll_callback，它会将发生的事件添加到rdlist双链表中
+
+  - 对于每一个事件，都会建立一个epitem结构体，如下所示：
+
+    ```c
+    struct epitem{
+        struct rb_node  rbn;//红黑树节点
+        struct list_head    rdllink;//双向链表节点
+        struct epoll_filefd  ffd;  //事件句柄信息
+        struct eventpoll *ep;    //指向其所属的eventpoll对象
+        struct epoll_event event; //期待发生的事件类型
+    }
+    ```
+
+  - 当调用epoll_wait检查是否有事件发生时，只需要检查eventpoll对象中的rdlist双链表中是否有epitem元素即可。如果rdlist不为空，则把发生的事件复制到用户态，同时将事件数量返回给用户
+
+  ![img](https://img-blog.csdnimg.cn/20190518113809289.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3d0ZXJ1aXljYnFxdnd0,size_16,color_FFFFFF,t_70)
+
+- 调用
+
+  - epoll_create()系统调用。此调用返回一个句柄，之后所有的使用都依靠这个句柄来标识
+  - epoll_ctl()系统调用。通过此调用向epoll对象中添加、删除、修改感兴趣的事件，返回0标识成功，返回-1表示失败
+  - epoll_wait()系统调用。通过此调用收集在epoll监控中已经发生的事件
+
+##### （4）对比
+
+- 支持一个进程所能打开的最大连接数
+
+  - select：单个进程所能打开的最大连接数有FD_SETSIZE宏定义，其大小是32个整数的大小（在32位的机器上，大小就是3232，同理64位机器上FD_SETSIZE为3264）
+  - poll：没有最大连接数的限制，原因是基于链表来存储的
+  - epoll：有上限，但是很大，1G内存的机器上可以打开10万左右的连接
+
+- FD剧增后带来的IO效率问题
+
+  - select：因为每次调用时都会对连接进行线性遍历，所以随着FD的增加会造成遍历速度慢的“线性下降性能问题”
+  - poll：同上
+  - epoll：因为epoll内核中实现是根据每个fd上的callback函数来实现的，只有活跃的socket才会主动调用callback，所以在活跃socket较少的情况下，使用epoll没有前面两者的线性下降的性能问题，但是所有socket都很活跃的情况下，可能会有性能问题
+
+- 消息传递方式
+
+  - select：内核需要将消息传递到用户空间，都需要内核拷贝动作
+
+  - poll：同上
+
+  - epoll：epoll通过内核和用户空间共享一块内存来实现的
+
+- 总结：
+  - 表面上看epoll的性能最好，但是在连接数少并且连接都十分活跃的情况下，select和poll的性能可能比epoll好，毕竟epoll的通知机制需要很多函数回调
+    - select，poll实现需要自己不断轮询所有fd集合，直到设备就绪，期间可能要睡眠和唤醒多次交替。而epoll其实也需要调用epoll_wait不断轮询就绪链表，期间也可能多次睡眠和唤醒交替，但是它是设备就绪时，调用回调函数，把就绪fd放入就绪链表中，并唤醒在epoll_wait中进入睡眠的进程。虽然都要睡眠和交替，但是select和poll在“醒着”的时候要遍历整个fd集合，而epoll在“醒着”的时候只要判断一下就绪链表是否为空就行了，这节省了大量的CPU时间。这就是回调机制带来的性能提升
+  - select低效是因为每次它都需要轮询。但低效也是相对的，视情况而定
+    - select，poll每次调用都要把fd集合从用户态往内核态拷贝一次，且要把current往设备等待队列中挂一次，而epoll只要一次拷贝，而且把current往等待队列上挂也只挂一次（在epoll_wait的开始，注意这里的等待队列并不是设备等待队列，只是一个epoll内部定义的等待队列），节省不少的开销
+
+1、表面上看epoll的性能最好，但是在连接数少并且连接都十分活跃的情况下，select和poll的性能可能比epoll好，毕竟epoll的通知机制需要很多函数回调。
+
+
+

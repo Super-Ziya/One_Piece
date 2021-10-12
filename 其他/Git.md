@@ -4,11 +4,11 @@
 
 - 要添加文件移动到git仓库所在文件夹
 
-- `git add 文件名`添加到暂存区（stage/index）
+- `git add 文件名` 添加到暂存区（stage/index）
 
-- `git add .` 添加所有
+  - `git add .` 添加所有
 
-- `git commit -m"对本次提交的说明"`提交到当前分支
+- `git commit -m"对本次提交的说明"` 提交到当前分支
 
   > add只能添加单个文件 ，commit可以一次提交多个文件
   >
@@ -16,18 +16,20 @@
 
 ---
 
-- `git status`可以查看仓库的状态
-- `git diff 文件名`可以查看修改内容
-- `git log`查看所有提交日志
+- `git status` 查看仓库的状态
+- `git diff 文件名` 查看修改内容
+- `git log` 查看所有提交日志
 
 #### 二、回退版本
 
-- `git reset --hard HEAD^`回退上一个版本
+- `git reset --hard HEAD^` 回退上一个版本
 
   > HEAD^^是上上个版本，HEAD~100是回退100个版本
 
-- `git reset --hard + id`回退到指定版本（版本号不用写全）
-- `git reflog`记录每一条指令（可以查看版本id）
+  - `git reset --hard 1094a` 返回到未来指定版本（1094a...是版本号）
+
+- `git reset --hard + id` 回退到指定版本（版本号不用写全）
+- `git reflog` 记录每一条指令（可以查看版本id）
 
 #### 三、撤销修改
 
@@ -65,25 +67,25 @@
 
 #### 六、分支
 
-- `git checkout -b 分支名`或`git switch -c 分支名`创建分支并切换到该分支
+- `git checkout -b 分支名` 或 `git switch -c 分支名` 创建分支并切换到该分支
 
   > 相当于
   >
-  > `git branch 分支名`创建分支
+  > `git branch 分支名` 创建分支
   >
-  > ``git checkout 分支名`或`git switch 分支名`转到某分支
+  > ``git checkout 分支名`或`git switch 分支名` 转到某分支
 
-- `git branch`查看当前分支（当前分支前带有`*`）
+- `git branch` 查看当前分支（当前分支前带有 `*`）
 
-- `git branch -d 分支名`删除该分支
+- `git branch -d 分支名` 删除该分支
 
 - `git branch -D 分支名`强行删除未合并分支
 
-- `git merge 分支名`合并指定分支到当前分支
+- `git merge 分支名` 合并指定分支到当前分支
 
-  > `Fast-forward`“快进模式”，直接把`master`指向`dev`的当前提交
+  > `Fast-forward` “快进模式”，直接把 `master` 指向 `dev` 的当前提交
   >
-  > `--no-ff`参数表示禁用`Fast forward`
+  > `--no-ff` 参数表示禁用 `Fast forward`
 
 - `git log --graph`查看分支合并图
 

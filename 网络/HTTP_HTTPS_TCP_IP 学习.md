@@ -187,11 +187,23 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
 
 - 二进制协议
 
-  > HTTP1.x 是文本协议，文本的表现形式有多样性，要做到健壮性考虑的场景很多，二进制只认 0 和 1 的组合，实现方便且健壮
+  > HTTP2是基于二进制“帧”的协议，HTTP1.1是基于“文本分割”解析的协议，文本的表现形式有多样性，要做到健壮性考虑的场景很多，二进制只认 0 和 1 的组合，实现方便且健壮
 
-  - 性能，二进制协议的解析效率超高，几乎没有解析代价
-  - 带宽，二进制协议没有冗余字段，占用带宽少
-  - 压缩及 Https 技术弱化了文本协议的价值
+  - 文本格式：以换行符分割每一条key:value的内容，解析速度慢且容易出错。“服务端”要不断读入字节直到遇到分隔符（换行符，代码中可能使用/n或/r/n表示），问题：
+
+    - 一次只能处理一个请求或响应，因为在完成之前不能停止解析（字符必须按顺序传送）
+    - 无法预知需要多少内存，这会带给“服务端”很大的压力，因为不知道要把一行要解析的内容读到多大的“缓冲区”中，在保证解析效率和速度的前提下，内存该如何分配
+
+  - 二进制帧：前9个字节对每个帧都是一致的，“服务器”只需解析这些字节，就知道整个帧期望多少字节数来进行处理，对二进制帧进行顺序标识，不会出现乱序
+
+    | 名称              | 长度   | 描述                                 |
+    | :---------------- | :----- | :----------------------------------- |
+    | Length            | 3 字节 | 帧负载长度，默认最大帧大小2^14       |
+    | Type              | 1 字节 | 当前帧的类型                         |
+    | Flags             | 1 字节 | 具体帧的标识                         |
+    | R                 | 1 字节 | 保留位，不需要设置                   |
+    | Stream Identifier | 31 位  | 每个流的唯一ID                       |
+    | Frame Payload     | 不固定 | 真实帧的长度，真实长度在Length中设置 |
 
 - 多路复用
 
@@ -238,8 +250,6 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
 
 ### 八、HTTPS
 
-### HTTPS 通信过程和理论基础
-
 ####1、密码学基础
 
 - 明文： 未被加密过的原始数据
@@ -282,13 +292,13 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
   - 客户端向服务器发起 HTTPS 请求，连接到服务器的 443 端口，发送 Client Hello 消息：
 
     - 一个客户端生成的随机数 Random1
-    - 客户端支持的加密套件（Support Ciphers Suites）
+    - 客户端支持的加密组件列表（Ciphers Suites，所使用的加密算法及密钥长度等）
     - SSL Version
     - 压缩算法（压缩 Http 头部）等
 
   - 服务器端接收到 Client Hello 后发送 Server Hello 消息
 
-    - 从客户端传来的消息中确定一种加密套件（决定加密和生成摘要时使用的算法）
+    - 从客户端传来的消息中确定一种加密组件（决定加密和生成摘要时使用的算法）
     - 生成随机数 Random2（用来创建加密密钥）
     - 如果支持则同意客户端首选的压缩算法
     - 选择客户端支持的 SSL 最新版本
@@ -319,14 +329,22 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
   - 客户端发送一个 ChangeCipherSpec 消息（编码改变通知，ChangeCipherSpec 是一个独立协议）
 
     - 把协商的加密套件拷贝到当前连接状态中
-    - 用新算法、密钥参数发送一个 Finished 消息，同时是前面发送的所有内容的 hash 值，检查密钥交换和认证过程是否成功（使用 HMAC 算法计算收到和发送的所有握手消息的摘要，通过 RFC5246 定义的伪函数 PRF 计算出结果，加密后发送）
-
-  - 服务器同样发送 ChangeCipherSpec 消息和 Finished 消息
-
+  
+- 客户端用新算法、密钥参数发送一个 Finished 消息，包含连接至今全部报文的整体校验值（也就是HASH值），检查密钥交换和认证过程是否成功（使用 HMAC 算法计算收到和发送的所有握手消息的摘要，通过 RFC5246 定义的伪函数 PRF 计算出结果，加密后发送）
+  
+- 服务器同样发送 ChangeCipherSpec 消息和 Finished 消息
+  
     - 用私钥解密得 Pre-master 数据，基于两个明文随机数计算得协商密钥
     - 计算之前所有接收信息的 hash 值，解密客户端发送的 hash 值，验证数据和密钥正确性
     - 发送一个 ChangeCipherSpec（告知客户端已经切换到协商过的加密套件状态，准备使用加密套件和 Session Secret 加密数据）
     - 用 Session Secret 加密一段 Finish 消息发送给客户端，验证之前通过握手建立起来的加解密通道是否成功
+  
+- 三个随机数
+
+  - 对于客户端：生成 Pre-master secret 后，结合之前两个随机数，用加密算法算出 master secret，根据其推导出 hash secret 和 session secret
+  - 对于服务端：解密获得 Pre-master secret 后，结合之前两个随机数，用加密算法算出 master secret，根据其推导出 hash secret 和 session secret
+  - 客户端和服务端的 master secret 依据三个随机数推导出来，不会在网络上传输的，只有双方知道，不会有第三者知道，同时推导出来的 session secret 和 hash secret 与服务端一样
+  - 需要随机数生成的密钥才不会每次都一样，由于 SSL 协议中证书是静态的，有必要引入随机因素保证协商密钥的随机性。对于 RSA 密钥交换算法，pre-master secret 本身是随机数，再加上之前两个随机数，三个随机数通过一个密钥导出器最终导出一个对称密钥。pre-master secret 的存在在于 SSL 协议不信任每个主机都能产生完全随机的随机数，如果随机数不随机，pre-mastersecret 有可能被猜出来，仅用 pre-master secret 作为密钥不合适，客户端和服务器加上 pre-master secret 三个随机数一同生成的密钥就不易被猜出了，一个伪随机可能完全不随机，三个伪随机就十分接近随机了，每增加一个自由度，随机性增加的可不是一
 
 ------
 
@@ -492,36 +510,192 @@ urn:oasis:names:specification:docbook:dtd:xml:4.1.2
 
 <img src="图片.assets\http1、2、3.jpg" alt="http1、2、3" style="zoom: 50%;" />
 
-> 基于 UDP，真正解决了队头阻塞问题
+- 相比 HTTP2+TCP+TLS：
+  - 减少 TCP 三次握手及 TLS 握手时间
+  - 改进的拥塞控制
+  - 避免队头阻塞的多路复用
+  - 连接迁移
+  - 前向冗余纠错
+- 矛盾
+  - 协议历史悠久导致中间设备僵化，如有些防火墙只允许通过 80 和 443，不放通其他端口
+  - 依赖于操作系统的实现导致协议本身僵化
+  - 建立连接的握手延迟大
+    - TCP 三次握手的延迟
+    - TLS 完全握手需要至少 2 个 RTT，简化握手需要 1 个 RTT 的握手延迟
+  - 队头阻塞
+    - TCP 使用序列号来标识数据的顺序，数据必须按照顺序处理，如果前面的数据丢失，后面的数据就算到达了也不会通知应用层来处理
+    - TLS 协议都是按照 record 来处理数据，如果一个 record 中丢失数据，会导致整个 record 无法正确处理
 
-#### 1、机制
+#### 1、特性
 
-- 自定义连接机制
+- 连接建立延时低
 
-  > 一条 tcp 连接由四元组标识，分别是源 ip、源端口、目的端口，一个元素发生变化时就会断开重连，再次进行三次握手，导致一定的延时
-  >
-  > UDP 可以在 QUIC 的逻辑里维护连接机制，不再以四元组标识，而是以一个 64 位的随机数作为 ID 标识，且 UDP 无连接，当 ip 或端口变化时，只要 ID 不变，就不需重新建立连接
+  - 0RTT 建连
+    - 传输层 0RTT 就能建立连接
+    - 加密层 0RTT 就能建立加密连接
 
-- 自定义重传机制
+  ![img](https://upload-images.jianshu.io/upload_images/3476718-2160180a0cb063d1)
 
-  > tcp 为保证可靠性，通过使用序号和应答机制，来解决顺序问题和丢包问题，任一序号包发过去，都要在一定时间内得到应答，超时就会重发这个序号的包，通过自适应重传算法（通过采样往返时间 RTT 不断调整）
-  >
-  > 但在 TCP 里面超时的采样存在不准确的问题。如发送一个包，序号 100，没有返回，再发送一个 100，过一阵返回 ACK101，客户端收到了，但往返时间没法计算（是 ACK 到达的时候减去第一还是第二？）
-  >
-  > QUIC 也有序列号，是递增的，任何序列号的包只发送一次，下次就加 1，使计算准确
-  >
-  > QUIC 定义一个 offset 概念。QUIC 是面向连接的，是一个数据流，发送的数据在这个数据流里有个偏移量 offset，可通过 offset 查看数据发送到了哪里，只有这个 offset 的包没有来，就要重发。如果来了，按照 offset 拼接，还是能够拼成一个流。
+- 改进的拥塞控制
 
-![image](http://www.chenjinxinlove.com/cdn/offsetbbb.png)
+  - TCP：慢启动，拥塞避免，快重传，快恢复
 
-- 无阻塞的多路复用
+  - QUIC 默认使用 TCP 的 Cubic 拥塞控制算法 ，也支持 CubicBytes, Reno, RenoBytes, BBR, PCC 等拥塞控制算法
 
-  > 同 HTTP2.0 一样，同一条 QUIC 连接上可以创建多个 stream，来发送多个 HTTP 请求，但 QUIC 基于 UDP，一个连接上的多个 stream 之间没有依赖。假如 stream2 丢了一个 UDP 包，后面跟着 stream3 的一个 UDP 包，虽然 stream2 的包需要重传，但 stream3 包无需等待就可发给用户
+    - 可插拔：能非常灵活地生效，变更和停止
 
-- 自定义流量控制
+      > 应用程序层面就能实现不同的拥塞控制算法，不需要操作系统，不需要内核支持。TCP 拥塞控制必须要端到端的网络协议栈支持才能实现。而内核和操作系统的部署成本非常高，升级周期很长
+      >
+      > 单个应用程序的不同连接也能配置不同的拥塞控制
+      >
+      > 应用程序不需停机和升级就能实现拥塞控制的变更
 
-  > TCP 的流量控制是通过滑动窗口协议，QUIC 的流量控制也是。但 QUIC 窗口适应自己的多路复用机制，不但在一个连接上控制窗口，还在一个连接中的每个 steam 控制窗口
-  >
-  > TCP 协议中，接收端的窗口的起始点是下一个要接收并且 ACK 的包，即便后来的包都到了，放在缓存里面，窗口也不能右移，因为 TCP 的 ACK 机制是基于序列号的累计应答，一旦 ACK 了一个序列号，说明前面的都到了，使用前面的没到，后面的到了也不能 ACK，导致后面的到了也有可能超时重传，浪费带宽
-  >
-  > QUIC 的 ACK 基于 offset，每个 offset 的包来了，进了缓存就可应答，应答后就不会重发，中间的空档会等待到来或重发，窗口的起始位置为当前收到的最大 offset，从这个 offset 到当前的 stream 所能容纳的最大缓存，是真正的窗口的大小，更加准确
+  ---
+
+  - TCP：为了保证可靠性，使用基于字节序号的 Sequence Number 及 Ack 来确认消息的有序到达
+
+  - QUIC 使用 Packet Number 代替 Sequence Number，且每个 Packet Number 都严格递增，就算 Packet N 丢失了，重传的 Packet N 的 Packet Number 是一个比 N 大的值，TCP 重传 segment 的 sequence number 和原始保持不变，造成 Tcp 重传的歧义问题：不好判断 RTT
+
+    ![img](https://upload-images.jianshu.io/upload_images/3476718-3b46b4072eabab0c)
+
+    ![img](https://upload-images.jianshu.io/upload_images/3476718-4501c6958d1c8ac3)
+
+  - QUIC 还引入 Stream Offset，即一个 Stream 可以经过多个 Packet 传输，Packet Number 严格递增，没有依赖。但 Packet 里的 Payload 如果是 Stream ，需要依靠 Stream 的 Offset 保证应用数据的顺序。假设 Packet N 丢失，发起重传，重传的 Packet Number 是 N+2，但是它的 Stream 的 Offset 依然是 x，这样就算 Packet N + 2 是后到的，依然可将 Stream x 和 Stream x+y 按顺序组织起来交给应用程序处理
+
+    ![img](https://upload-images.jianshu.io/upload_images/3476718-ebca6710bcf15695)
+
+- 不允许 Reneging（接收方丢弃已经接收并且上报给 SACK 选项的内容）
+
+  - TCP 不鼓励，但协议层面允许。考虑到服务器资源有限，如 Buffer 溢出、内存不够等
+  - Reneging 对数据重传产生很大的干扰。因为 Sack 表明接收到，但接收端事实上丢弃了该数据
+  - QUIC 在协议层面禁止 Reneging，一个 Packet 只要被 Ack，就认为它一定被正确接收，减少了这种干扰
+
+- 更多的 Ack 块
+
+  - TCP 的 Sack 告诉发送方已经接收到的连续 Segment 的范围，方便发送方选择性重传，由于 TCP 头部最大只有 60 字节，标准头部占用 20 字节，Tcp Option 最大长度只有 40 字节，再加上 Tcp Timestamp option 占用 10 字节，留给 Sack 选项只有 30 字节
+  - 每一个 Sack Block 长度是 8 个，加上 Sack Option 头部 2 个字节，Tcp Sack Option 最大只能提供 3 个 Block
+  - Quic Ack Frame 可以同时提供 256 个 Ack Block，在丢包率比较高的网络下，更多的 Sack Block 可以提升网络的恢复速度，减少重传量
+
+- Ack Delay 时间
+
+  - Tcp 的 Timestamp 选项只是回显了发送方的时间戳，没有计算接收端接收到 segment 到发送 Ack 该 segment 的时间（Ack Delay），导致 RTT 计算误差，RTT = timeStamp2 - timeStamp1
+
+  - QUIC：RTT = timeStamp2 - timeStamp1 - Ack Delay
+
+    ![img](https://upload-images.jianshu.io/upload_images/3476718-70e17098039397e2)
+
+- 基于 Stream 和 Connection 级别的流量控制
+
+  - QUIC 的流量控制类似 HTTP2，即在 Connection 和 Stream 级别提供了两种流量控制，因为 QUIC 支持多路复用，在一条 Connetion 上会同时存在多条 Stream。既需要对单个 Stream 进行控制，又需要针对所有 Stream 进行总体控制
+
+    - Stream 可认为是一条 HTTP 请求，可用窗口 = 最大窗口数 - 接收到的最大偏移量
+    - Connection 可类比一条 TCP 连接，可用窗口 = stream1 可用窗口 + stream2 可用窗口 + streamN 可用窗口
+
+  - QUIC 流量控制
+
+    - 通过 window_update 帧告诉对端自己可以接收的字节数，发送方就不会发送超过这个数量的数据
+    - 通过 BlockFrame 告诉对端由于流量控制被阻塞了，无法发送数据
+    - QUIC 的流量控制和 TCP 有点区别，TCP 为了保证可靠性，窗口左边沿向右滑动时的长度取决于已经确认的字节数，如果中间出现丢包，就算接收到更大序号的 Segment，窗口也无法超过这个序列号；QUIC 就算此前有些 packet 没有接收到，它的滑动只取决于接收到的最大偏移字节数
+
+    ![img](https://upload-images.jianshu.io/upload_images/3476718-25eb51669327ea30)
+
+- 无队头阻塞的多路复用
+
+  - QUIC 的多路复用和 HTTP2 类似。在一条 QUIC 连接上可以并发发送多个 HTTP 请求 (stream)
+
+  - QUIC 一个连接上的多个 stream 间没有依赖。如 stream2 丢了一个 udp packet，只影响 stream2 的处理，不影响 stream2 前及之后的 stream 的处理
+
+  - HTTP2 的 TCP 队头阻塞：
+
+    ![img](https://upload-images.jianshu.io/upload_images/3476718-e11f888d0d3f8046)
+
+  - HTTP2 强制 TLS，TLS 队头阻塞：Record 是 TLS 协议处理的最小单位，不超过 16K，由于一个 record 必须经过数据一致性校验才能进行加解密，所以一个 16K 的 record，就算丢了一个字节，也会导致已经接收到的 15.99K 数据无法处理，因为不完整
+
+    ![img](https://upload-images.jianshu.io/upload_images/3476718-caf6f05b2efa7756)
+
+  - QUIC：
+
+    - 最基本的传输单元是 Packet，不超过 MTU（最大传输单元），整个加密和认证过程基于 Packet，不跨越多个 Packet，避免 TLS 协议队头阻塞
+    - Stream 间相互独立，如 Stream2 丢了一个 Pakcet，不影响 Stream3 和 Stream4，不存在 TCP 队头阻塞
+
+    ![img](https://upload-images.jianshu.io/upload_images/3476718-28f763ea0ee73de3)
+
+  ---
+
+  - TCP 协议头部没有经过任何加密和认证，在传输过程中很容易被中间网络设备篡改，注入和窃听。如修改序列号、滑动窗口
+
+  - QUIC 的 packet 除了个别报文如 PUBLIC_RESET 和 CHLO，所有报文头部都是经过认证的，报文 Body 都是经过加密的，只要对 QUIC 报文任何修改，接收端都能够及时发现，有效地降低了安全风险
+
+    （红色是 Stream Frame 报文头部，有认证、绿色是报文内容，加密）
+
+    ![img](https://upload-images.jianshu.io/upload_images/3476718-c5c5eda1292e415b)
+
+- 连接迁移
+
+  - 连接迁移：当其中任一个元素变化时，这条连接依然维持着，能够保持业务逻辑不中断，如手机在 WIFI 和 4G 移动网络切换时，客户端的 IP 肯定发生变化，需要重新建立和服务端的 TCP 连接，从 TCP 连接角度无解
+  - TCP 连接由四元组标识（源 IP，源端口，目的 IP，目的端口）
+  - QUIC 连接不以 IP 及端口四元组标识，以一个 64 位的随机数作为 ID 来标识，就算 IP 或者端口发生变化，只要 ID 不变，连接依然维持着，上层业务逻辑感知不到变化，不中断，不重连
+  - ID 是客户端随机产生的，长度 64 位，冲突概率非常低
+
+- 其他
+
+  - QUIC 还实现前向冗余纠错，在重要的包如握手消息发生丢失时，能够根据冗余信息还原出握手消息
+  - QUIC 还实现证书压缩，减少证书传输量，针对包头进行验证等
+
+### 十一、SSL
+
+- 握手协议
+
+  ![img](https://img-blog.csdn.net/20180523150126935)
+
+  - 建立安全能力：SSL握手的第一阶段启动逻辑连接，建立这个连接的安全能力。首先客户机向服务器发出client hello消息并等待服务器响应，随后服务器向客户机返回server hello消息，对client hello消息中的信息进行确认。
+
+    - 客户发送CilentHello信息，包含：
+
+      （1）客户端可以支持的SSL最高版本号
+
+      （2）一个用于生成主密钥的32字节的随机数
+
+      （3）一个确定会话的会话ID
+
+      （4）一个客户端可以支持的密码套件列表：每个套件都以“SSL”开头，紧跟着的是密钥交换算法。用“With”把密钥交换算法、加密算法、散列算法分开
+
+      （5）一个客户端可以支持的压缩算法列表
+
+    - 服务器用ServerHello信息应答客户，包括：
+
+      （1）一个SSL版本号。取客户端支持的最高版本号和服务端支持的最高版本号中的较低者
+
+      （2）一个用于生成主密钥的32字节的随机数。（客户端一个、服务端一个）
+
+      （3）会话ID
+
+      （4）从客户端的密码套件列表中选择的一个密码套件
+
+      （5）从客户端的压缩方法的列表中选择的压缩方法
+
+  - 服务器鉴别与密钥交换
+    （1）服务器将数字证书和到根CA整个链发给客户端，使客户端能用服务器证书中的服务器公钥认证服务器，先发送了密钥交换算法对应的加密/解密公钥证书
+    （2）服务器密钥交换（可选）：这里视密钥交换算法而定
+    （3）证书请求：服务端可能会要求客户自身进行验证
+
+  - 客户机鉴别与密钥交换
+
+    （1）为了对服务器证明自身，客户要发送一个证书信息，可选，在IIS中可以配置强制客户端证书认证
+
+    （2）客户机密钥交换：这里客户端将预备主密钥发送给服务端，使用服务端的公钥进行加密
+
+    （3）证书验证（可选），对预备秘密和随机数进行签名，证明拥有（a）证书的公钥
+
+  - 完成
+
+    ![img](https://img-blog.csdn.net/2018052315035019?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NoaXBmc2hfc2g=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70)
+
+- 记录协议：在客户机和服务器握手成功后使用，即客户机和服务器鉴别对方和确定安全信息交换使用的算法后，进入SSL记录协议，记录协议向SSL连接提供两个服务：
+
+  - 保密性：使用握手协议定义的秘密密钥实现
+  - 完整性：握手协议定义了MAC，用于保证消息完整性
+
+  ![img](https://img-blog.csdn.net/20180523150500822?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NoaXBmc2hfc2g=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70)
+
+- 警报协议：客户机和服务器发现错误时，向对方发送一个警报消息。如果是致命错误，则算法立即关闭SSL连接，双方还会先删除相关的会话号，秘密和密钥。每个警报消息共2个字节，第1个字节表示错误类型，如果是警报，则值为1，如果是致命错误，则值为2；第2个字节制定实际错误类型
